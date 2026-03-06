@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CHRONOS: La Guerra por la Memoria</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+</head>
+<body>
+
+  <!-- ======== PANTALLA SELECCIÓN DE FACCIÓN ======== -->
+  <div id="screen-faction"></div>
+
+  <!-- ======== PANTALLA DE JUEGO ======== -->
+  <div id="screen-game" class="hidden">
+
+    <!-- HUD Superior -->
+    <div id="hud-bar">
+      <span id="hud-turn">TURNO 1</span>
+      <span id="hud-faction"></span>
+
+      <div class="res-group" title="Población total"><span class="res-icon">👥</span><span class="res-value" id="res-pop">0</span></div>
+      <div class="res-group" title="Comida"><span class="res-icon">🌾</span><span class="res-value" id="res-food">0</span></div>
+      <div class="res-group" title="Materiales"><span class="res-icon">⚙️</span><span class="res-value" id="res-mat">0</span></div>
+      <div class="res-group" title="Energía"><span class="res-icon">⚡</span><span class="res-value" id="res-energy">0</span></div>
+      <div class="res-group" title="Créditos"><span class="res-icon">💰</span><span class="res-value" id="res-credits">0</span></div>
+      <div class="res-group" title="Moral"><span class="res-icon">😊</span><span class="res-value" id="res-morale">0</span></div>
+      <div class="res-group" title="Recurso especial"><span class="res-icon" id="res-special-icon">⭐</span><span class="res-value" id="res-special">0</span></div>
+
+      <div class="hud-spacer"></div>
+
+      <button class="hud-btn" id="btn-tech" title="Investigación">🔬</button>
+      <button class="hud-btn" id="btn-save" title="Guardar">💾</button>
+      <button class="hud-btn" id="btn-load" title="Cargar">📂</button>
+      <button class="hud-btn" id="btn-audio" title="Audio">🔊</button>
+      <button id="btn-end-turn">⏭ TERMINAR TURNO</button>
+    </div>
+
+    <!-- Canvas del Mapa -->
+    <div id="canvas-container">
+      <canvas id="game-canvas"></canvas>
+    </div>
+
+    <!-- Panel Lateral -->
+    <div id="side-panel">
+      <div id="panel-title" style="color: var(--gold); font-weight: 700; margin-bottom: 8px; font-size: 0.9rem;">📋 DISTRITO</div>
+      <div id="panel-content">
+        <p style="color: var(--text-dim); font-size: 0.85rem;">Haz clic en un hexágono para ver su información.</p>
+      </div>
+    </div>
+
+    <!-- Log Inferior -->
+    <div id="log-bar">
+      <div id="log-container"></div>
+    </div>
+  </div>
+
+  <!-- ======== MODAL ======== -->
+  <div id="modal" class="hidden">
+    <div class="modal-box">
+      <div id="modal-title"></div>
+      <div id="modal-body"></div>
+      <div id="modal-actions"></div>
+    </div>
+  </div>
+
+  <!-- ======== PANEL TECNOLÓGICO ======== -->
+  <div id="tech-panel" class="hidden">
+    <div id="tech-content"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/hex.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/resources.js"></script>
+  <script src="js/buildings.js"></script>
+  <script src="js/units.js"></script>
+  <script src="js/tech.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/events.js"></script>
+  <script src="js/turns.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/save.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

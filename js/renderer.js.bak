@@ -1,0 +1,274 @@
+// ============================================================================
+// CHRONOS: La Guerra por la Memoria — Renderer (Canvas)
+// ============================================================================
+(function () {
+  const C = CHRONOS.Config;
+  const H = CHRONOS.Hex;
+
+  class Renderer {
+    constructor(canvas) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext('2d');
+      this.offsetX = 0;
+      this.offsetY = 0;
+      this.size = C.HEX_SIZE;
+      this.animations = [];
+      this._calcOffset();
+    }
+
+    _calcOffset() {
+      const totalW = this.size * 3 / 2 * (C.GRID_COLS - 1) + this.size * 2;
+      const totalH = Math.sqrt(3) * this.size * C.GRID_ROWS + Math.sqrt(3) * this.size * 0.5;
+      this.offsetX = (this.canvas.width - totalW) / 2 + this.size;
+      this.offsetY = (this.canvas.height - totalH) / 2 + Math.sqrt(3) * this.size / 2;
+    }
+
+    resize(w, h) {
+      this.canvas.width = w;
+      this.canvas.height = h;
+      this._calcOffset();
+    }
+
+    getHexCenter(q, r) {
+      return H.hexToPixel(q, r, this.size, this.offsetX, this.offsetY);
+    }
+
+    pixelToHex(px, py) {
+      return H.pixelToHex(px, py, this.size, this.offsetX, this.offsetY);
+    }
+
+    render(game) {
+      const ctx = this.ctx;
+      const map = game.map;
+
+      // Clear
+      ctx.fillStyle = C.COLORS.bg;
+      ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+      // Draw hexagons
+      for (let q = 0; q < C.GRID_COLS; q++) {
+        for (let r = 0; r < C.GRID_ROWS; r++) {
+          const d = map.get(q, r);
+          this._drawHex(ctx, d, game);
+        }
+      }
+
+      // Draw selection
+      if (game.selectedHex) {
+        this._drawSelection(ctx, game.selectedHex.q, game.selectedHex.r);
+      }
+
+      // Draw movement range
+      if (game.movementRange) {
+        for (const h of game.movementRange) {
+          this._drawMovementHighlight(ctx, h.q, h.r, game);
+        }
+      }
+
+      // Draw animations
+      this._processAnimations(ctx);
+    }
+
+    _drawHex(ctx, district, game) {
+      const { q, r } = district;
+      const { x, y } = this.getHexCenter(q, r);
+      const s = this.size;
+
+      // Fog of war
+      if (!district.isVisible) {
+        H.drawHexPath(ctx, x, y, s);
+        ctx.fillStyle = '#080C12';
+        ctx.fill();
+        H.drawHexPath(ctx, x, y, s);
+        ctx.strokeStyle = '#1A1F28';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Fog pattern
+        ctx.fillStyle = '#0D1117';
+        ctx.font = `${s * 0.6}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('?', x, y);
+        return;
+      }
+
+      // Hex fill
+      H.drawHexPath(ctx, x, y, s);
+      const factionId = district.faction;
+      let fillColor;
+      if (factionId) {
+        const fc = C.FACTIONS[factionId];
+        fillColor = fc ? fc.colorDark : C.COLORS.neutral;
+      } else {
+        fillColor = '#1A1F28';
+      }
+      ctx.fillStyle = fillColor;
+      ctx.fill();
+
+      // Inner gradient for type
+      const typeData = C.DISTRICT_TYPES[district.type];
+      if (typeData) {
+        H.drawHexPath(ctx, x, y, s * 0.85);
+        ctx.fillStyle = typeData.color + '18';
+        ctx.fill();
+      }
+
+      // Hex border
+      H.drawHexPath(ctx, x, y, s);
+      if (factionId && C.FACTIONS[factionId]) {
+        ctx.strokeStyle = C.FACTIONS[factionId].color + 'AA';
+        ctx.lineWidth = 2;
+        // Glow effect
+        ctx.shadowColor = C.FACTIONS[factionId].color;
+        ctx.shadowBlur = 4;
+      } else if (district.type === 'sigma7') {
+        ctx.strokeStyle = C.COLORS.sigma7 + 'CC';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = C.COLORS.sigma7;
+        ctx.shadowBlur = 6;
+      } else {
+        ctx.strokeStyle = C.COLORS.border;
+        ctx.lineWidth = 1;
+        ctx.shadowBlur = 0;
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // District type icon
+      ctx.font = `${s * 0.45}px serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText(typeData ? typeData.icon : '?', x, y - s * 0.15);
+
+      // Population / units count (small text)
+      if (district.population > 0 || district.units.length > 0) {
+        ctx.font = `bold ${s * 0.25}px monospace`;
+        ctx.fillStyle = C.COLORS.text;
+        const pop = district.population;
+        ctx.fillText(`👥${pop}`, x, y + s * 0.3);
+      }
+
+      // Units indicator
+      if (district.units.length > 0) {
+        const totalUnits = district.getTotalUnits();
+        ctx.font = `bold ${s * 0.22}px monospace`;
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText(`⚔${totalUnits}`, x, y + s * 0.55);
+      }
+
+      // Buildings indicator
+      if (district.buildings.length > 0) {
+        const builtCount = district.buildings.filter(b => b.turnsLeft <= 0).length;
+        if (builtCount > 0) {
+          ctx.font = `${s * 0.2}px monospace`;
+          ctx.fillStyle = '#A371F7';
+          ctx.fillText('🔨'.repeat(Math.min(builtCount, 3)), x, y + s * 0.75);
+        }
+      }
+    }
+
+    _drawSelection(ctx, q, r) {
+      const { x, y } = this.getHexCenter(q, r);
+      const s = this.size + 2;
+
+      // Pulsing glow
+      const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 300);
+      H.drawHexPath(ctx, x, y, s);
+      ctx.strokeStyle = `rgba(255, 215, 0, ${0.6 + pulse * 0.4})`;
+      ctx.lineWidth = 3;
+      ctx.shadowColor = '#FFD700';
+      ctx.shadowBlur = 8 + pulse * 6;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    _drawMovementHighlight(ctx, q, r, game) {
+      const { x, y } = this.getHexCenter(q, r);
+      const s = this.size - 2;
+      const d = game.map.get(q, r);
+
+      H.drawHexPath(ctx, x, y, s);
+      if (d && d.faction && d.faction !== game.playerFaction) {
+        ctx.fillStyle = 'rgba(248, 81, 73, 0.25)';
+        ctx.fill();
+        ctx.strokeStyle = '#F85149AA';
+      } else {
+        ctx.fillStyle = 'rgba(255, 235, 59, 0.15)';
+        ctx.fill();
+        ctx.strokeStyle = '#FFEB3BAA';
+      }
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Combat animation: flash + damage number
+    addCombatAnimation(q, r, damage, isDefender) {
+      const { x, y } = this.getHexCenter(q, r);
+      this.animations.push({
+        type: 'combat',
+        x, y,
+        damage,
+        color: isDefender ? '#F85149' : '#FFD700',
+        start: Date.now(),
+        duration: 1200
+      });
+    }
+
+    // Conquest animation
+    addConquestAnimation(q, r, factionColor) {
+      const { x, y } = this.getHexCenter(q, r);
+      this.animations.push({
+        type: 'conquest',
+        x, y,
+        color: factionColor,
+        start: Date.now(),
+        duration: 800
+      });
+    }
+
+    _processAnimations(ctx) {
+      const now = Date.now();
+      this.animations = this.animations.filter(a => {
+        const elapsed = now - a.start;
+        if (elapsed > a.duration) return false;
+        const t = elapsed / a.duration;
+
+        if (a.type === 'combat') {
+          // Flash
+          if (t < 0.3) {
+            const alpha = 1 - t / 0.3;
+            H.drawHexPath(ctx, a.x, a.y, this.size);
+            ctx.fillStyle = `rgba(248, 81, 73, ${alpha * 0.5})`;
+            ctx.fill();
+          }
+          // Damage number float up
+          ctx.font = `bold ${this.size * 0.5}px monospace`;
+          ctx.textAlign = 'center';
+          ctx.fillStyle = a.color + Math.round((1 - t) * 255).toString(16).padStart(2, '0');
+          ctx.fillText(`-${a.damage}`, a.x, a.y - t * 40);
+        }
+
+        if (a.type === 'conquest') {
+          const alpha = (1 - t) * 0.6;
+          const scale = 1 + t * 0.5;
+          H.drawHexPath(ctx, a.x, a.y, this.size * scale);
+          ctx.strokeStyle = a.color + Math.round(alpha * 255).toString(16).padStart(2, '0');
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        }
+
+        return true;
+      });
+    }
+
+    hasAnimations() {
+      return this.animations.length > 0;
+    }
+  }
+
+  CHRONOS.Renderer = Renderer;
+})();

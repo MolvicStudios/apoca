@@ -1,0 +1,123 @@
+// ============================================================================
+// CHRONOS: La Guerra por la Memoria — Árbol Tecnológico
+// ============================================================================
+(function () {
+  const C = CHRONOS.Config;
+
+  class TechManager {
+    constructor() {
+      this.factionTechs = {}; // { factionId: { researched: [], current: null } }
+    }
+
+    init(factionIds) {
+      for (const fid of factionIds) {
+        this.factionTechs[fid] = {
+          researched: [],
+          current: null // { id, turnsLeft }
+        };
+      }
+    }
+
+    getResearched(factionId) {
+      return this.factionTechs[factionId]?.researched || [];
+    }
+
+    hasResearched(factionId, techId) {
+      return this.getResearched(factionId).includes(techId);
+    }
+
+    getCurrentResearch(factionId) {
+      return this.factionTechs[factionId]?.current || null;
+    }
+
+    getAvailableTechs(factionId) {
+      const tree = C.TECH_TREES[factionId];
+      if (!tree) return [];
+      const researched = this.getResearched(factionId);
+      return tree.filter(tech => {
+        if (researched.includes(tech.id)) return false;
+        // Check requires
+        for (const req of tech.requires) {
+          if (!researched.includes(req)) return false;
+        }
+        return true;
+      });
+    }
+
+    startResearch(factionId, techId, resources) {
+      const tree = C.TECH_TREES[factionId];
+      if (!tree) return { ok: false, msg: 'No hay árbol tecnológico' };
+
+      const tech = tree.find(t => t.id === techId);
+      if (!tech) return { ok: false, msg: 'Tecnología desconocida' };
+
+      if (this.hasResearched(factionId, techId)) return { ok: false, msg: 'Ya investigado' };
+
+      // Check current research
+      if (this.factionTechs[factionId].current) {
+        return { ok: false, msg: 'Ya hay una investigación en curso' };
+      }
+
+      // Check requirements
+      for (const req of tech.requires) {
+        if (!this.hasResearched(factionId, req)) {
+          return { ok: false, msg: 'Requisitos no cumplidos' };
+        }
+      }
+
+      // Check cost
+      if (!resources.canAfford(factionId, tech.cost)) {
+        return { ok: false, msg: 'Recursos insuficientes' };
+      }
+
+      resources.spend(factionId, tech.cost);
+
+      this.factionTechs[factionId].current = {
+        id: techId,
+        turnsLeft: tech.turns,
+        totalTurns: tech.turns
+      };
+
+      return { ok: true, msg: `Investigando: ${tech.name}` };
+    }
+
+    // Process research each turno
+    processTurn(factionId, map) {
+      const state = this.factionTechs[factionId];
+      if (!state || !state.current) return null;
+
+      // Research bonus from labs
+      let bonus = 0;
+      for (const d of map.getFactionsDistricts(factionId)) {
+        bonus += d.getResearchBonus();
+      }
+
+      state.current.turnsLeft -= (1 + Math.floor(bonus / 3));
+
+      if (state.current.turnsLeft <= 0) {
+        const techId = state.current.id;
+        state.researched.push(techId);
+        state.current = null;
+
+        const tree = C.TECH_TREES[factionId];
+        const tech = tree ? tree.find(t => t.id === techId) : null;
+        return tech;
+      }
+      return null;
+    }
+
+    getAllTechs(factionId) {
+      return C.TECH_TREES[factionId] || [];
+    }
+
+    serialize() {
+      return JSON.parse(JSON.stringify(this.factionTechs));
+    }
+
+    deserialize(data) {
+      this.factionTechs = data;
+    }
+  }
+
+  CHRONOS.TechManager = TechManager;
+})();

@@ -1,0 +1,619 @@
+// ============================================================================
+// CHRONOS: La Guerra por la Memoria — Interfaz de Usuario (DOM)
+// ============================================================================
+(function () {
+  const C = CHRONOS.Config;
+
+  class UI {
+    constructor(game) {
+      this.game = game;
+      this._pendingResolve = null;
+    }
+
+    init() {
+      this._cacheElements();
+      this._bindEvents();
+    }
+
+    _cacheElements() {
+      this.els = {
+        // Screens
+        screenFaction: document.getElementById('screen-faction'),
+        screenGame: document.getElementById('screen-game'),
+        // HUD
+        hudTurn: document.getElementById('hud-turn'),
+        hudFaction: document.getElementById('hud-faction'),
+        resPop: document.getElementById('res-pop'),
+        resFood: document.getElementById('res-food'),
+        resMat: document.getElementById('res-mat'),
+        resEnergy: document.getElementById('res-energy'),
+        resCredits: document.getElementById('res-credits'),
+        resMorale: document.getElementById('res-morale'),
+        resSpecial: document.getElementById('res-special'),
+        resSpecialIcon: document.getElementById('res-special-icon'),
+        // Panels
+        sidePanel: document.getElementById('side-panel'),
+        panelTitle: document.getElementById('panel-title'),
+        panelContent: document.getElementById('panel-content'),
+        // Buttons
+        btnEndTurn: document.getElementById('btn-end-turn'),
+        btnSave: document.getElementById('btn-save'),
+        btnLoad: document.getElementById('btn-load'),
+        btnAudio: document.getElementById('btn-audio'),
+        btnTech: document.getElementById('btn-tech'),
+        // Modal
+        modal: document.getElementById('modal'),
+        modalTitle: document.getElementById('modal-title'),
+        modalBody: document.getElementById('modal-body'),
+        modalActions: document.getElementById('modal-actions'),
+        // Log
+        logContainer: document.getElementById('log-container'),
+        // Tech panel
+        techPanel: document.getElementById('tech-panel'),
+        techContent: document.getElementById('tech-content')
+      };
+    }
+
+    _bindEvents() {
+      const g = this.game;
+
+      // End turn
+      this.els.btnEndTurn.addEventListener('click', () => {
+        if (g.turnManager.phase !== 'waiting') return;
+        CHRONOS.Audio.endTurn();
+        g.selectedHex = null;
+        g.movementRange = null;
+        g.turnManager.endTurn();
+      });
+
+      // Save/Load
+      this.els.btnSave.addEventListener('click', () => {
+        if (CHRONOS.Save.save(g)) this._showToast('💾 Partida guardada');
+        else this._showToast('❌ Error al guardar');
+      });
+
+      this.els.btnLoad.addEventListener('click', () => {
+        const data = CHRONOS.Save.load();
+        if (data) {
+          g.loadSave(data);
+          this._showToast('📂 Partida cargada');
+        } else {
+          this._showToast('❌ No hay partida guardada');
+        }
+      });
+
+      // Audio toggle
+      this.els.btnAudio.addEventListener('click', () => {
+        const on = CHRONOS.Audio.toggle();
+        this.els.btnAudio.textContent = on ? '🔊' : '🔇';
+      });
+
+      // Tech panel toggle
+      this.els.btnTech.addEventListener('click', () => {
+        this.els.techPanel.classList.toggle('hidden');
+        if (!this.els.techPanel.classList.contains('hidden')) this.updateTechPanel();
+      });
+
+      // Canvas click
+      g.canvas.addEventListener('click', (e) => this._onCanvasClick(e));
+
+      // Canvas mousemove for tooltips
+      g.canvas.addEventListener('mousemove', (e) => this._onCanvasHover(e));
+    }
+
+    _onCanvasClick(e) {
+      const g = this.game;
+      if (g.turnManager.phase !== 'waiting') return;
+
+      const rect = g.canvas.getBoundingClientRect();
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      const hex = g.renderer.pixelToHex(px, py);
+
+      if (!CHRONOS.Hex.isValid(hex.q, hex.r)) return;
+
+      const district = g.map.get(hex.q, hex.r);
+      if (!district || !district.isVisible) {
+        CHRONOS.Audio.click();
+        return;
+      }
+
+      // If we have a movement range and clicked on a valid target
+      if (g.movementRange && g.selectedHex) {
+        const isValidTarget = g.movementRange.some(h => h.q === hex.q && h.r === hex.r);
+        if (isValidTarget) {
+          const result = g.unitManager.moveUnits(
+            g.selectedHex.q, g.selectedHex.r,
+            hex.q, hex.r,
+            g.playerFaction, g.map, g.renderer, g.resources
+          );
+          if (result.ok) {
+            if (result.combat) {
+              CHRONOS.Audio.combat();
+              if (result.won) CHRONOS.Audio.conquest();
+              g.turnManager.addLog(`⚔️ ${result.msg}`);
+            } else {
+              CHRONOS.Audio.select();
+              g.turnManager.addLog(`🚶 Unidades movidas a (${hex.q},${hex.r})`);
+            }
+            g.map.updateVisibility(g.playerFaction);
+          } else {
+            this._showToast(result.msg);
+          }
+          g.selectedHex = null;
+          g.movementRange = null;
+          this.update();
+          g.render();
+          return;
+        }
+      }
+
+      // Select hex
+      g.selectedHex = { q: hex.q, r: hex.r };
+      CHRONOS.Audio.select();
+
+      // Show movement range if player's hex with units
+      if (district.faction === g.playerFaction && district.units.some(u => u.faction === g.playerFaction && !u.hasMoved)) {
+        g.movementRange = g.unitManager.getMovementRange(hex.q, hex.r, g.playerFaction, g.map);
+      } else {
+        g.movementRange = null;
+      }
+
+      this.showDistrictPanel(district);
+      g.render();
+    }
+
+    _onCanvasHover(e) {
+      const g = this.game;
+      const rect = g.canvas.getBoundingClientRect();
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      const hex = g.renderer.pixelToHex(px, py);
+
+      if (CHRONOS.Hex.isValid(hex.q, hex.r)) {
+        g.canvas.style.cursor = 'pointer';
+      } else {
+        g.canvas.style.cursor = 'default';
+      }
+    }
+
+    showDistrictPanel(district) {
+      const g = this.game;
+      const typeData = C.DISTRICT_TYPES[district.type];
+      const isOwn = district.faction === g.playerFaction;
+
+      let html = '';
+
+      // Header
+      const factionName = district.faction ? (C.FACTIONS[district.faction]?.name || 'Neutral') : 'Neutral';
+      const factionColor = district.faction ? (C.FACTIONS[district.faction]?.color || C.COLORS.neutral) : C.COLORS.neutral;
+
+      html += `<div class="panel-header" style="border-left: 3px solid ${factionColor}">`;
+      html += `<span class="panel-icon">${typeData?.icon || '?'}</span>`;
+      html += `<div><strong>${typeData?.name || 'Desconocido'}</strong><br>`;
+      html += `<span style="color:${factionColor}">${factionName}</span></div>`;
+      html += `</div>`;
+
+      // Info
+      html += `<div class="panel-section">`;
+      html += `<div class="panel-label">Coordenadas</div><div class="panel-value">(${district.q}, ${district.r})</div>`;
+      html += `<div class="panel-label">Población</div><div class="panel-value">👥 ${district.population}</div>`;
+      html += `<div class="panel-label">Defensa</div><div class="panel-value">🛡️ ${district.getDefense()}</div>`;
+      html += `</div>`;
+
+      // Production
+      if (district.faction) {
+        const prod = district.getProduction();
+        html += `<div class="panel-section"><div class="panel-subtitle">Producción</div>`;
+        html += `<div class="prod-grid">`;
+        if (prod.food) html += `<span>🌾${prod.food > 0 ? '+' : ''}${prod.food}</span>`;
+        if (prod.materials) html += `<span>⚙️${prod.materials > 0 ? '+' : ''}${prod.materials}</span>`;
+        if (prod.energy) html += `<span>⚡${prod.energy > 0 ? '+' : ''}${prod.energy}</span>`;
+        if (prod.credits) html += `<span>💰${prod.credits > 0 ? '+' : ''}${prod.credits}</span>`;
+        if (prod.morale) html += `<span>😊${prod.morale > 0 ? '+' : ''}${prod.morale}</span>`;
+        if (prod.population) html += `<span>👥${prod.population > 0 ? '+' : ''}${prod.population}</span>`;
+        html += `</div></div>`;
+      }
+
+      // Buildings
+      if (district.buildings.length > 0) {
+        html += `<div class="panel-section"><div class="panel-subtitle">Edificios</div>`;
+        for (const b of district.buildings) {
+          const bd = C.BUILDINGS[b.type];
+          if (bd) {
+            const status = b.turnsLeft > 0 ? ` (${b.turnsLeft} turnos)` : ' ✅';
+            html += `<div class="building-item">${bd.icon} ${bd.name}${status}</div>`;
+          }
+        }
+        html += `</div>`;
+      }
+
+      // Units
+      if (district.units.length > 0) {
+        html += `<div class="panel-section"><div class="panel-subtitle">Unidades</div>`;
+        for (const u of district.units) {
+          const ud = C.UNITS[u.type];
+          if (ud) {
+            const movedIcon = u.hasMoved ? ' 💤' : ' ✊';
+            html += `<div class="unit-item">`;
+            html += `${ud.icon} ${ud.name} ×${u.quantity}${u.faction === g.playerFaction ? movedIcon : ''}`;
+            html += `<span class="unit-stats">⚔${ud.atk} 🛡${ud.def}</span>`;
+            html += `</div>`;
+          }
+        }
+        html += `</div>`;
+      }
+
+      // Actions for own district
+      if (isOwn) {
+        html += `<div class="panel-section panel-actions">`;
+
+        // Build
+        if (district.canBuild()) {
+          html += `<div class="panel-subtitle">Construir</div>`;
+          const available = g.buildings.getAvailableBuildings(district, g.playerFaction);
+          for (const b of available) {
+            const canAfford = g.resources.canAfford(g.playerFaction, b.cost);
+            const costStr = Object.entries(b.cost).map(([k, v]) => `${v}${this._resIcon(k)}`).join(' ');
+            html += `<button class="btn-build ${canAfford ? '' : 'disabled'}" data-building="${b.id}" data-q="${district.q}" data-r="${district.r}" title="${b.desc}">`;
+            html += `${b.icon} ${b.name} <span class="cost">${costStr}</span>`;
+            html += `</button>`;
+          }
+        }
+
+        // Recruit
+        html += `<div class="panel-subtitle" style="margin-top:8px">Reclutar</div>`;
+        const units = g.unitManager.getAvailableUnits(g.playerFaction);
+        for (const u of units) {
+          const cost = (g.playerFaction === 'horda' && u.id === 'caminante') ? {} : u.cost;
+          const canAfford = g.resources.canAfford(g.playerFaction, cost);
+          const costStr = Object.keys(cost).length > 0 ?
+            Object.entries(cost).map(([k, v]) => `${v}${this._resIcon(k)}`).join(' ') : 'GRATIS';
+          html += `<button class="btn-recruit ${canAfford ? '' : 'disabled'}" data-unit="${u.id}" data-q="${district.q}" data-r="${district.r}" title="${u.desc}">`;
+          html += `${u.icon} ${u.name} <span class="cost">${costStr}</span>`;
+          html += `</button>`;
+        }
+
+        html += `</div>`;
+      }
+
+      this.els.panelContent.innerHTML = html;
+
+      // Bind build buttons
+      this.els.panelContent.querySelectorAll('.btn-build:not(.disabled)').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const bid = btn.dataset.building;
+          const q = parseInt(btn.dataset.q);
+          const r = parseInt(btn.dataset.r);
+          const d = g.map.get(q, r);
+          if (d) {
+            const result = g.buildings.build(d, bid, g.playerFaction, g.resources);
+            CHRONOS.Audio.build();
+            this._showToast(result.msg);
+            this.update();
+            this.showDistrictPanel(d);
+            g.render();
+          }
+        });
+      });
+
+      // Bind recruit buttons
+      this.els.panelContent.querySelectorAll('.btn-recruit:not(.disabled)').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const uid = btn.dataset.unit;
+          const q = parseInt(btn.dataset.q);
+          const r = parseInt(btn.dataset.r);
+          const d = g.map.get(q, r);
+          if (d) {
+            const result = g.unitManager.recruit(d, uid, g.playerFaction, g.resources);
+            if (result.ok) CHRONOS.Audio.recruit();
+            this._showToast(result.msg);
+            this.update();
+            this.showDistrictPanel(d);
+            g.render();
+          }
+        });
+      });
+    }
+
+    _resIcon(key) {
+      const icons = { population: '👥', food: '🌾', materials: '⚙️', energy: '⚡', credits: '💰', morale: '😊', biomasa: '🧬', datos: '💾', neural: '🧠', influencia: '🤝' };
+      return icons[key] || key;
+    }
+
+    update() {
+      const g = this.game;
+      const res = g.resources.get(g.playerFaction);
+      if (!res) return;
+
+      this.els.hudTurn.textContent = `TURNO ${g.turnManager.turn}`;
+      const f = C.FACTIONS[g.playerFaction];
+      this.els.hudFaction.textContent = `${f.emoji} ${f.name}`;
+      this.els.hudFaction.style.color = f.color;
+
+      this.els.resPop.textContent = res.population;
+      this.els.resFood.textContent = res.food;
+      this.els.resMat.textContent = res.materials;
+      this.els.resEnergy.textContent = res.energy;
+      this.els.resCredits.textContent = res.credits;
+      this.els.resMorale.textContent = res.morale;
+      this.els.resSpecial.textContent = res.special;
+
+      const spec = C.FACTIONS[g.playerFaction]?.specialResource;
+      if (spec) {
+        this.els.resSpecialIcon.textContent = spec.icon;
+        this.els.resSpecialIcon.title = spec.name + ': ' + spec.desc;
+      }
+
+      // Morale color
+      if (res.morale < C.COMBAT.MORALE_THRESHOLD_LOW) {
+        this.els.resMorale.style.color = '#F85149';
+      } else if (res.morale > C.COMBAT.MORALE_THRESHOLD_HIGH) {
+        this.els.resMorale.style.color = '#3FB950';
+      } else {
+        this.els.resMorale.style.color = C.COLORS.text;
+      }
+
+      // Update log
+      this.updateLog();
+
+      // Disable end turn during processing
+      this.els.btnEndTurn.disabled = g.turnManager.phase !== 'waiting';
+    }
+
+    updateLog() {
+      const g = this.game;
+      let html = '';
+      const recent = g.turnManager.log.slice(-10);
+      for (const entry of recent) {
+        html += `<div class="log-entry">${entry.msg}</div>`;
+      }
+      this.els.logContainer.innerHTML = html;
+      this.els.logContainer.scrollTop = this.els.logContainer.scrollHeight;
+    }
+
+    updateTechPanel() {
+      const g = this.game;
+      const techs = g.tech.getAllTechs(g.playerFaction);
+      const researched = g.tech.getResearched(g.playerFaction);
+      const current = g.tech.getCurrentResearch(g.playerFaction);
+      const available = g.tech.getAvailableTechs(g.playerFaction);
+
+      let html = '<div class="tech-header">🔬 Investigación</div>';
+
+      if (current) {
+        const tree = C.TECH_TREES[g.playerFaction];
+        const tech = tree?.find(t => t.id === current.id);
+        if (tech) {
+          const pct = Math.round((1 - current.turnsLeft / current.totalTurns) * 100);
+          html += `<div class="tech-current">`;
+          html += `<div class="tech-name">${tech.icon} ${tech.name}</div>`;
+          html += `<div class="tech-progress"><div class="tech-bar" style="width:${pct}%"></div></div>`;
+          html += `<div class="tech-eta">${current.turnsLeft} turnos restantes</div>`;
+          html += `</div>`;
+        }
+      }
+
+      // Group by branch
+      const branches = {};
+      for (const t of techs) {
+        if (!branches[t.branch]) branches[t.branch] = [];
+        branches[t.branch].push(t);
+      }
+
+      for (const [branch, branchTechs] of Object.entries(branches)) {
+        html += `<div class="tech-branch"><div class="tech-branch-name">${branch.toUpperCase()}</div>`;
+        for (const t of branchTechs) {
+          const isResearched = researched.includes(t.id);
+          const isAvailable = available.some(a => a.id === t.id);
+          const isCurrent = current && current.id === t.id;
+
+          let cls = 'tech-item';
+          if (isResearched) cls += ' researched';
+          else if (isCurrent) cls += ' current';
+          else if (isAvailable) cls += ' available';
+          else cls += ' locked';
+
+          html += `<div class="${cls}" data-tech="${t.id}" title="${t.effect.desc}">`;
+          html += `<span class="tech-icon">${t.icon}</span> ${t.name}`;
+          if (!isResearched && !isCurrent) {
+            html += `<span class="tech-cost">${t.cost.energy}⚡ ${t.turns}T</span>`;
+          }
+          if (isResearched) html += ` ✅`;
+          html += `</div>`;
+        }
+        html += `</div>`;
+      }
+
+      this.els.techContent.innerHTML = html;
+
+      // Bind available techs
+      this.els.techContent.querySelectorAll('.tech-item.available').forEach(el => {
+        el.addEventListener('click', () => {
+          const techId = el.dataset.tech;
+          const result = g.tech.startResearch(g.playerFaction, techId, g.resources);
+          if (result.ok) {
+            CHRONOS.Audio.build();
+            this._showToast(result.msg);
+          } else {
+            this._showToast(result.msg);
+          }
+          this.updateTechPanel();
+          this.update();
+        });
+      });
+    }
+
+    // ---- Faction Selection Screen ----
+    showFactionSelect() {
+      this.els.screenFaction.classList.remove('hidden');
+      this.els.screenGame.classList.add('hidden');
+
+      let html = '<div class="faction-select-title">CHRONOS</div>';
+      html += '<div class="faction-select-subtitle">La Guerra por la Memoria</div>';
+      html += '<div class="faction-select-desc">Selecciona tu facción</div>';
+
+      // Check for saved game
+      if (CHRONOS.Save.hasSave()) {
+        html += `<button class="btn-continue" id="btn-continue-save">📂 Continuar Partida Guardada</button>`;
+      }
+
+      html += '<div class="faction-grid">';
+      for (const [fid, fdata] of Object.entries(C.FACTIONS)) {
+        html += `<div class="faction-card" data-faction="${fid}" style="--fc: ${fdata.color}">`;
+        html += `<div class="faction-emoji">${fdata.emoji}</div>`;
+        html += `<div class="faction-name">${fdata.name}</div>`;
+        html += `<div class="faction-leader">${fdata.leader.name}</div>`;
+        html += `<div class="faction-leader-title">${fdata.leader.title}</div>`;
+        html += `<div class="faction-desc">${fdata.desc}</div>`;
+        html += `<div class="faction-bonus">✅ ${fdata.bonus}</div>`;
+        html += `<div class="faction-weakness">⚠️ ${fdata.weakness}</div>`;
+        html += `<div class="faction-special">${fdata.specialResource.icon} ${fdata.specialResource.name}</div>`;
+        html += `<div class="faction-victory">🏆 ${C.VICTORY_CONDITIONS[fid].desc}</div>`;
+        html += `</div>`;
+      }
+      html += '</div>';
+
+      this.els.screenFaction.innerHTML = html;
+
+      // Bind cards
+      this.els.screenFaction.querySelectorAll('.faction-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const fid = card.dataset.faction;
+          CHRONOS.Audio.select();
+          this.game.startNewGame(fid);
+        });
+      });
+
+      // Bind continue
+      const btnContinue = document.getElementById('btn-continue-save');
+      if (btnContinue) {
+        btnContinue.addEventListener('click', () => {
+          const data = CHRONOS.Save.load();
+          if (data) {
+            this.game.loadSave(data);
+          }
+        });
+      }
+    }
+
+    showGameScreen() {
+      this.els.screenFaction.classList.add('hidden');
+      this.els.screenGame.classList.remove('hidden');
+    }
+
+    // ---- Modals ----
+    showEvent(event) {
+      return new Promise(resolve => {
+        CHRONOS.Audio.event();
+        this.els.modal.classList.remove('hidden');
+        this.els.modalTitle.textContent = event.name;
+        this.els.modalBody.innerHTML = `<p>${event.desc}</p>`;
+
+        let effectStr = '';
+        if (event.effect) {
+          const parts = Object.entries(event.effect).map(([k, v]) => `${v > 0 ? '+' : ''}${v} ${this._resIcon(k)}`);
+          effectStr = `<p class="event-effect">${parts.join(' ')}</p>`;
+        }
+        this.els.modalBody.innerHTML += effectStr;
+
+        this.els.modalActions.innerHTML = `<button class="btn-modal" id="btn-modal-ok">Aceptar</button>`;
+        document.getElementById('btn-modal-ok').addEventListener('click', () => {
+          this.els.modal.classList.add('hidden');
+          resolve();
+        });
+      });
+    }
+
+    showEventChoice(event) {
+      return new Promise(resolve => {
+        CHRONOS.Audio.event();
+        this.els.modal.classList.remove('hidden');
+        this.els.modalTitle.textContent = event.name;
+        this.els.modalBody.innerHTML = `<p>${event.desc}</p>`;
+
+        let btns = '';
+        event.options.forEach((opt, i) => {
+          btns += `<button class="btn-modal btn-choice" data-choice="${i}">${opt.text}</button>`;
+        });
+        this.els.modalActions.innerHTML = btns;
+
+        this.els.modalActions.querySelectorAll('.btn-choice').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.choice);
+            const enemies = Object.keys(C.FACTIONS).filter(f => f !== this.game.playerFaction);
+            this.game.events.applyChoice(event, idx, this.game.playerFaction, this.game.resources, enemies);
+            this.els.modal.classList.add('hidden');
+            this.update();
+            resolve();
+          });
+        });
+      });
+    }
+
+    showNotification(msg) {
+      return new Promise(resolve => {
+        this._showToast(msg);
+        setTimeout(resolve, 500);
+      });
+    }
+
+    showGameEnd(result) {
+      return new Promise(resolve => {
+        this.els.modal.classList.remove('hidden');
+
+        if (result.type === 'defeat') {
+          CHRONOS.Audio.defeat();
+          this.els.modalTitle.textContent = '💀 DERROTA';
+          this.els.modalBody.innerHTML = `<p>Has perdido todos tus distritos. El apocalipsis ganó.</p>
+            <p>"Al menos moriste un martes, como decía el libro."</p>
+            <p class="event-effect">Sobreviviste ${result.turn} turnos.</p>`;
+        } else {
+          CHRONOS.Audio.victory();
+          const winner = C.FACTIONS[result.winner];
+          const isPlayer = result.winner === this.game.playerFaction;
+          this.els.modalTitle.textContent = isPlayer ? '🏆 ¡VICTORIA!' : `😱 ${winner.name} ha ganado`;
+          let bodyHtml = '';
+          if (isPlayer) {
+            bodyHtml = `<p>¡${winner.name} ha cumplido su condición de victoria!</p>`;
+            bodyHtml += `<p>${C.VICTORY_CONDITIONS[result.winner].desc}</p>`;
+            bodyHtml += `<p>"Y pensar que todo empezó un martes cualquiera..."</p>`;
+          } else {
+            bodyHtml = `<p>${winner.name} ha alcanzado la victoria antes que tú.</p>`;
+            bodyHtml += `<p>"En el apocalipsis, ser segundo no es una opción."</p>`;
+          }
+          bodyHtml += `<p class="event-effect">Turno: ${result.turn}</p>`;
+          // Stats
+          bodyHtml += `<div class="stats-grid">`;
+          for (const [fid, fdata] of Object.entries(C.FACTIONS)) {
+            const count = this.game.map.countFactionDistricts(fid);
+            bodyHtml += `<div style="color:${fdata.color}">${fdata.emoji} ${fdata.name}: ${count} distritos</div>`;
+          }
+          bodyHtml += `</div>`;
+          this.els.modalBody.innerHTML = bodyHtml;
+        }
+
+        this.els.modalActions.innerHTML = `<button class="btn-modal" id="btn-new-game">🔄 Nueva Partida</button>`;
+        document.getElementById('btn-new-game').addEventListener('click', () => {
+          this.els.modal.classList.add('hidden');
+          this.showFactionSelect();
+          resolve();
+        });
+      });
+    }
+
+    _showToast(msg) {
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add('show'));
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 2000);
+    }
+  }
+
+  CHRONOS.UI = UI;
+})();

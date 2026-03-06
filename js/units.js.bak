@@ -1,0 +1,273 @@
+// ============================================================================
+// CHRONOS: La Guerra por la Memoria — Unidades y Combate
+// ============================================================================
+(function () {
+  const C = CHRONOS.Config;
+  const H = CHRONOS.Hex;
+
+  class UnitManager {
+    getAvailableUnits(factionId) {
+      const available = [];
+      for (const [uid, udata] of Object.entries(C.UNITS)) {
+        if (udata.faction === 'all' || udata.faction === factionId) {
+          available.push({ id: uid, ...udata });
+        }
+      }
+      return available;
+    }
+
+    recruit(district, unitId, factionId, resources) {
+      const udata = C.UNITS[unitId];
+      if (!udata) return { ok: false, msg: 'Unidad desconocida' };
+      if (district.faction !== factionId) return { ok: false, msg: 'No es tu distrito' };
+      if (udata.faction !== 'all' && udata.faction !== factionId) return { ok: false, msg: 'Unidad no disponible para tu facción' };
+
+      // Horda free recruitment for caminantes
+      const cost = (factionId === 'horda' && unitId === 'caminante') ? {} : { ...udata.cost };
+
+      if (!resources.canAfford(factionId, cost)) {
+        return { ok: false, msg: 'Recursos insuficientes' };
+      }
+
+      resources.spend(factionId, cost);
+
+      // Check if unit type already exists in district
+      const existing = district.units.find(u => u.type === unitId && u.faction === factionId);
+      if (existing) {
+        existing.quantity += (unitId === 'caminante' ? 5 : 1);
+      } else {
+        district.units.push({
+          type: unitId,
+          faction: factionId,
+          quantity: (unitId === 'caminante' ? 5 : 1),
+          hp: udata.hp,
+          hasMoved: true // can't move on recruit turn
+        });
+      }
+
+      // Spend population
+      if (cost.population) {
+        district.population = Math.max(1, district.population - cost.population);
+      }
+
+      return { ok: true, msg: `${udata.name} reclutado(s)` };
+    }
+
+    // Get valid movement targets
+    getMovementRange(q, r, factionId, map) {
+      const district = map.get(q, r);
+      if (!district) return [];
+
+      // Find best movement value among unmoved units
+      let maxMove = 0;
+      for (const u of district.units) {
+        if (u.faction === factionId && !u.hasMoved) {
+          const udata = C.UNITS[u.type];
+          if (udata && udata.move > maxMove) maxMove = udata.move;
+        }
+      }
+
+      if (maxMove === 0) return [];
+
+      // BFS to find reachable hexes
+      const visited = new Set();
+      const queue = [{ q, r, dist: 0 }];
+      visited.add(`${q},${r}`);
+      const results = [];
+
+      while (queue.length > 0) {
+        const cur = queue.shift();
+        if (cur.dist > 0) results.push({ q: cur.q, r: cur.r });
+        if (cur.dist < maxMove) {
+          for (const n of H.getNeighbors(cur.q, cur.r)) {
+            const key = `${n.q},${n.r}`;
+            if (!visited.has(key)) {
+              visited.add(key);
+              const nd = map.get(n.q, n.r);
+              // Can always move to empty/own/neutral; can move to enemy (triggers combat)
+              if (nd) {
+                queue.push({ q: n.q, r: n.r, dist: cur.dist + 1 });
+              }
+            }
+          }
+        }
+      }
+      return results;
+    }
+
+    // Move units from one hex to another
+    moveUnits(fromQ, fromR, toQ, toR, factionId, map, renderer, resources) {
+      const from = map.get(fromQ, fromR);
+      const to = map.get(toQ, toR);
+      if (!from || !to) return { ok: false, msg: 'Hexágono inválido' };
+
+      // Collect unmoved units of this faction
+      const movingUnits = from.units.filter(u => u.faction === factionId && !u.hasMoved);
+      if (movingUnits.length === 0) return { ok: false, msg: 'No hay unidades disponibles para mover' };
+
+      // Check distance
+      const dist = H.distance(fromQ, fromR, toQ, toR);
+      const validUnits = movingUnits.filter(u => {
+        const ud = C.UNITS[u.type];
+        return ud && ud.move >= dist;
+      });
+
+      if (validUnits.length === 0) return { ok: false, msg: 'Unidades fuera de rango' };
+
+      // Enemy hex → combat
+      if (to.faction && to.faction !== factionId && to.units.length > 0) {
+        return this.resolveCombat(from, to, validUnits, factionId, map, renderer, resources);
+      }
+
+      // Empty/neutral/own hex → just move
+      // Remove from origin
+      from.units = from.units.filter(u => !validUnits.includes(u));
+
+      // Add to destination
+      for (const u of validUnits) {
+        u.hasMoved = true;
+        const existing = to.units.find(eu => eu.type === u.type && eu.faction === u.faction);
+        if (existing) {
+          existing.quantity += u.quantity;
+        } else {
+          to.units.push(u);
+        }
+      }
+
+      // Conquer neutral hex
+      if (!to.faction || to.faction !== factionId) {
+        if (!to.faction || to.units.filter(u => u.faction !== factionId).length === 0) {
+          to.faction = factionId;
+          to.justConquered = true;
+          if (renderer) renderer.addConquestAnimation(toQ, toR, C.FACTIONS[factionId].color);
+        }
+      }
+
+      return { ok: true, msg: 'Unidades movidas', combat: false };
+    }
+
+    resolveCombat(from, to, attackingUnits, attackerFaction, map, renderer, resources) {
+      const defenderFaction = to.faction;
+      const attackerRes = resources.get(attackerFaction);
+      const defenderRes = resources.get(defenderFaction);
+
+      // Calculate attack power
+      let atkPower = 0;
+      for (const u of attackingUnits) {
+        const ud = C.UNITS[u.type];
+        if (ud) atkPower += ud.atk * u.quantity;
+      }
+      // Morale modifier
+      const atkMorale = attackerRes ? attackerRes.morale : 50;
+      atkPower = Math.round(atkPower * (atkMorale / 100));
+
+      // Calculate defense power
+      let defPower = 0;
+      for (const u of to.units) {
+        const ud = C.UNITS[u.type];
+        if (ud) defPower += ud.def * u.quantity;
+      }
+      defPower += to.getDefense();
+      const defMorale = defenderRes ? defenderRes.morale : 50;
+      defPower = Math.round(defPower * (defMorale / 100));
+
+      // Fortified district check (siege)
+      if (to.getDefense() >= 3 && to.siegeTurns < C.COMBAT.SIEGE_TURNS) {
+        to.siegeTurns++;
+        // Mark units as moved
+        for (const u of attackingUnits) u.hasMoved = true;
+        if (renderer) renderer.addCombatAnimation(to.q, to.r, 0, true);
+        return { ok: true, msg: `Asedio en progreso (${to.siegeTurns}/${C.COMBAT.SIEGE_TURNS} turnos)`, combat: true, siege: true };
+      }
+
+      // Damage calculation: Daño = (Ataque × Moral/100) - Defensa
+      const damageToDefender = Math.max(1, atkPower - Math.floor(defPower * 0.5));
+      const damageToAttacker = Math.max(1, defPower - Math.floor(atkPower * 0.3));
+
+      // Apply damage to defender
+      let defLosses = this._applyDamage(to.units, damageToDefender);
+
+      // Apply damage to attacker
+      let atkLosses = this._applyDamage(attackingUnits, damageToAttacker);
+
+      // Animations
+      if (renderer) {
+        renderer.addCombatAnimation(to.q, to.r, damageToDefender, true);
+        renderer.addCombatAnimation(from.q, from.r, damageToAttacker, false);
+      }
+
+      // Remove dead units
+      to.units = to.units.filter(u => u.quantity > 0);
+      from.units = from.units.filter(u => !attackingUnits.includes(u) || u.quantity > 0);
+
+      // Mark as moved
+      for (const u of attackingUnits) u.hasMoved = true;
+
+      // Horda assimilation
+      if (attackerFaction === 'horda' && defLosses > 0) {
+        const assimilated = Math.floor(defLosses * 0.3);
+        if (assimilated > 0) {
+          const caminante = from.units.find(u => u.type === 'caminante' && u.faction === 'horda');
+          if (caminante) caminante.quantity += assimilated;
+          else from.units.push({ type: 'caminante', faction: 'horda', quantity: assimilated, hp: C.UNITS.caminante.hp, hasMoved: true });
+        }
+      }
+
+      // Did attackers win?
+      const defenderAlive = to.units.filter(u => u.faction === defenderFaction).length > 0;
+
+      let msg;
+      if (!defenderAlive) {
+        // Attacker conquers
+        // Move surviving attackers to target
+        const survivors = attackingUnits.filter(u => u.quantity > 0);
+        from.units = from.units.filter(u => !survivors.includes(u));
+        for (const u of survivors) {
+          to.units.push(u);
+        }
+        to.faction = attackerFaction;
+        to.siegeTurns = 0;
+        to.justConquered = true;
+        if (renderer) renderer.addConquestAnimation(to.q, to.r, C.FACTIONS[attackerFaction].color);
+
+        // Morale effects
+        if (attackerRes) attackerRes.morale = Math.min(100, attackerRes.morale + 3);
+        if (defenderRes) defenderRes.morale = Math.max(0, defenderRes.morale - 5);
+
+        msg = `¡Victoria! Distrito conquistado. Bajas: ATK ${atkLosses}, DEF ${defLosses}`;
+      } else {
+        msg = `Combate sin conquista. Bajas: ATK ${atkLosses}, DEF ${defLosses}`;
+        if (attackerRes) attackerRes.morale = Math.max(0, attackerRes.morale - 2);
+      }
+
+      return { ok: true, msg, combat: true, siege: false, won: !defenderAlive, atkLosses, defLosses };
+    }
+
+    _applyDamage(units, totalDamage) {
+      let remaining = totalDamage;
+      let totalLosses = 0;
+      for (const u of units) {
+        if (remaining <= 0) break;
+        const ud = C.UNITS[u.type];
+        if (!ud) continue;
+        const killsNeeded = Math.ceil(remaining / Math.max(1, ud.hp));
+        const kills = Math.min(u.quantity, killsNeeded);
+        u.quantity -= kills;
+        totalLosses += kills;
+        remaining -= kills * ud.hp;
+      }
+      return totalLosses;
+    }
+
+    // Reset movement for all units of a faction
+    resetMovement(map, factionId) {
+      for (const d of map.getFactionsDistricts(factionId)) {
+        for (const u of d.units) {
+          if (u.faction === factionId) u.hasMoved = false;
+        }
+      }
+    }
+  }
+
+  CHRONOS.UnitManager = UnitManager;
+})();
