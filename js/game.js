@@ -11,6 +11,11 @@
       this.selectedHex = null;
       this.movementRange = null;
 
+      // Multiplayer state
+      this.playerConfig = {};       // { resistencia: 'human'|'ai', ... }
+      this.humanPlayers = [];       // ordered list of human faction IDs
+      this.activePlayerIndex = 0;   // index into humanPlayers for current sub-turn
+
       // Systems
       this.map = new CHRONOS.GameMap();
       this.resources = new CHRONOS.ResourceManager();
@@ -42,8 +47,12 @@
       if (this.playerFaction) this.render();
     }
 
-    startNewGame(factionId) {
-      this.playerFaction = factionId;
+    startNewGame(config) {
+      // config = { resistencia: 'human'|'ai', synergia: 'human'|'ai', ... }
+      this.playerConfig = config;
+      this.humanPlayers = Object.keys(config).filter(f => config[f] === 'human');
+      this.activePlayerIndex = 0;
+      this.playerFaction = this.humanPlayers[0] || Object.keys(config)[0];
       this.selectedHex = null;
       this.movementRange = null;
 
@@ -52,7 +61,7 @@
 
       // Init resources
       const factionIds = Object.keys(C.FACTIONS);
-      this.resources.init(factionIds, factionId);
+      this.resources.init(factionIds, this.playerFaction);
 
       // Init tech
       this.tech.init(factionIds);
@@ -60,10 +69,14 @@
       // Init turn manager
       this.turnManager = new CHRONOS.TurnManager(this);
       this.turnManager.addLog(`═══════ Turno 1 ═══════`);
-      this.turnManager.addLog(`${C.FACTIONS[factionId].emoji} Juegas como ${C.FACTIONS[factionId].name}`);
+      const f = C.FACTIONS[this.playerFaction];
+      if (this.humanPlayers.length > 1) {
+        this.turnManager.addLog(`🎮 Multijugador local: ${this.humanPlayers.length} jugadores humanos`);
+      }
+      this.turnManager.addLog(`${f.emoji} Turno de ${f.name}`);
 
-      // Update visibility
-      this.map.updateVisibility(factionId, this.tech);
+      // Update visibility for active player
+      this.map.updateVisibility(this.playerFaction, this.tech);
 
       // Show game screen
       this.ui.showGameScreen();
@@ -74,8 +87,8 @@
       // Create HUD overlays (zoom buttons, etc.)
       this.ui.createHUDOverlays();
 
-      // Center camera on player capital
-      const starts = C.FACTIONS[factionId].startPositions;
+      // Center camera on active player's capital
+      const starts = C.FACTIONS[this.playerFaction].startPositions;
       if (starts && starts.length > 0) {
         const center = this.renderer.getHexCenter(starts[0][0], starts[0][1]);
         this.renderer.camera.centerOn(center.x, center.y, this.canvas.width, this.canvas.height, 1.0);
@@ -95,6 +108,22 @@
       this.selectedHex = null;
       this.movementRange = null;
 
+      // Restore multiplayer state
+      if (data.playerConfig) {
+        this.playerConfig = data.playerConfig;
+        this.humanPlayers = data.humanPlayers || [data.playerFaction];
+        this.activePlayerIndex = data.activePlayerIndex || 0;
+      } else {
+        // Legacy single-player save
+        const config = {};
+        for (const fid of Object.keys(C.FACTIONS)) {
+          config[fid] = fid === data.playerFaction ? 'human' : 'ai';
+        }
+        this.playerConfig = config;
+        this.humanPlayers = [data.playerFaction];
+        this.activePlayerIndex = 0;
+      }
+
       this.map.deserialize(data.map);
       this.resources.deserialize(data.resources);
       this.tech.deserialize(data.tech);
@@ -107,7 +136,7 @@
       this._resizeCanvas();
       this.ui.createHUDOverlays();
 
-      // Center on capital
+      // Center on active player's capital
       const starts = C.FACTIONS[this.playerFaction].startPositions;
       if (starts && starts.length > 0) {
         const center = this.renderer.getHexCenter(starts[0][0], starts[0][1]);
@@ -127,6 +156,26 @@
       };
       if (this._animFrame) cancelAnimationFrame(this._animFrame);
       loop();
+    }
+
+    switchToPlayer(factionId) {
+      this.playerFaction = factionId;
+      this.selectedHex = null;
+      this.movementRange = null;
+      this.map.updateVisibility(factionId, this.tech);
+
+      // Center camera on this player's capital
+      const starts = C.FACTIONS[factionId].startPositions;
+      if (starts && starts.length > 0) {
+        const center = this.renderer.getHexCenter(starts[0][0], starts[0][1]);
+        this.renderer.camera.centerOn(center.x, center.y, this.canvas.width, this.canvas.height, 1.0);
+      }
+
+      this.ui.update();
+    }
+
+    isHuman(factionId) {
+      return this.playerConfig[factionId] === 'human';
     }
 
     render() {

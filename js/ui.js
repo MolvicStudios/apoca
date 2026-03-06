@@ -64,6 +64,7 @@
         btnLoad: document.getElementById('btn-load'),
         btnAudio: document.getElementById('btn-audio'),
         btnTech: document.getElementById('btn-tech'),
+        btnFullscreen: document.getElementById('btn-fullscreen'),
         modal: document.getElementById('modal'),
         modalTitle: document.getElementById('modal-title'),
         modalBody: document.getElementById('modal-body'),
@@ -118,6 +119,19 @@
       this.els.btnTech.addEventListener('click', () => {
         this.els.techPanel.classList.toggle('hidden');
         if (!this.els.techPanel.classList.contains('hidden')) this.updateTechPanel();
+      });
+
+      this.els.btnFullscreen.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      });
+
+      document.addEventListener('fullscreenchange', () => {
+        this.els.btnFullscreen.textContent = document.fullscreenElement ? '⛶' : '⛶';
+        this.els.btnFullscreen.title = document.fullscreenElement ? 'Salir de pantalla completa' : 'Pantalla completa';
       });
     }
 
@@ -767,7 +781,11 @@
 
       this.els.hudTurn.textContent = `TURNO ${g.turnManager.turn}`;
       const f = C.FACTIONS[g.playerFaction];
-      this.els.hudFaction.textContent = `${f.emoji} ${f.name}`;
+      if (g.humanPlayers.length > 1) {
+        this.els.hudFaction.textContent = `🎮 ${f.emoji} ${f.name} (${g.activePlayerIndex + 1}/${g.humanPlayers.length})`;
+      } else {
+        this.els.hudFaction.textContent = `${f.emoji} ${f.name}`;
+      }
       this.els.hudFaction.style.color = f.color;
 
       // Update resources with trend arrows
@@ -920,17 +938,23 @@
       this.els.screenFaction.classList.remove('hidden');
       this.els.screenGame.classList.add('hidden');
 
+      // Default config: first faction human, rest AI
+      const factionIds = Object.keys(C.FACTIONS);
+      const config = {};
+      factionIds.forEach((fid, i) => { config[fid] = i === 0 ? 'human' : 'ai'; });
+
       let html = '<div class="faction-select-title">CHRONOS</div>';
       html += '<div class="faction-select-subtitle">La Guerra por la Memoria</div>';
-      html += '<div class="faction-select-version">v2.0</div>';
-      html += '<div class="faction-select-desc">Selecciona tu facción</div>';
+      html += '<div class="faction-select-version">v2.0 — Multijugador Local</div>';
+      html += '<div class="faction-select-desc">Configura cada facción: HUMANO o IA</div>';
 
       if (CHRONOS.Save.hasSave()) {
         const info = CHRONOS.Save.getSaveInfo();
         let infoStr = '';
         if (info) {
           const f = C.FACTIONS[info.faction];
-          infoStr = ` — ${f ? f.emoji + ' ' + f.name : '?'} | Turno ${info.turn}`;
+          const playerCount = info.humanPlayers ? info.humanPlayers.length : 1;
+          infoStr = ` — ${f ? f.emoji + ' ' + f.name : '?'} | Turno ${info.turn} | 🎮×${playerCount}`;
         }
         html += `<button class="btn-continue" id="btn-continue-save">📂 Continuar Partida${infoStr}</button>`;
       }
@@ -947,18 +971,72 @@
         html += `<div class="faction-weakness">⚠️ ${fdata.weakness}</div>`;
         html += `<div class="faction-special">${fdata.specialResource.icon} ${fdata.specialResource.name}</div>`;
         html += `<div class="faction-victory">🏆 ${C.VICTORY_CONDITIONS[fid].desc}</div>`;
+        html += `<div class="faction-toggle" data-faction="${fid}">`;
+        html += `<button class="toggle-btn ${config[fid] === 'human' ? 'active' : ''}" data-mode="human">🎮 HUMANO</button>`;
+        html += `<button class="toggle-btn ${config[fid] === 'ai' ? 'active' : ''}" data-mode="ai">🤖 IA</button>`;
+        html += `</div>`;
         html += `</div>`;
       }
       html += '</div>';
 
+      html += '<button class="btn-start-game" id="btn-start-game">⚔️ INICIAR PARTIDA</button>';
+      html += '<div class="start-game-info" id="start-game-info"></div>';
+
       this.els.screenFaction.innerHTML = html;
 
-      this.els.screenFaction.querySelectorAll('.faction-card').forEach(card => {
-        card.addEventListener('click', () => {
-          const fid = card.dataset.faction;
-          CHRONOS.Audio.select();
-          this.game.startNewGame(fid);
+      const updateStartButton = () => {
+        const humanCount = Object.values(config).filter(v => v === 'human').length;
+        const btn = document.getElementById('btn-start-game');
+        const info = document.getElementById('start-game-info');
+        if (humanCount === 0) {
+          btn.disabled = true;
+          info.textContent = '⚠️ Se necesita al menos 1 jugador humano';
+          info.style.color = '#F85149';
+        } else {
+          btn.disabled = false;
+          info.textContent = `🎮 ${humanCount} humano${humanCount > 1 ? 's' : ''} / 🤖 ${4 - humanCount} IA`;
+          info.style.color = '#8B949E';
+        }
+      };
+      updateStartButton();
+
+      // Toggle buttons
+      this.els.screenFaction.querySelectorAll('.faction-toggle').forEach(toggle => {
+        toggle.querySelectorAll('.toggle-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const fid = toggle.dataset.faction;
+            const mode = btn.dataset.mode;
+            config[fid] = mode;
+            CHRONOS.Audio.select();
+
+            // Update visual state
+            toggle.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Update card visual
+            const card = toggle.closest('.faction-card');
+            card.classList.toggle('faction-card-human', mode === 'human');
+            card.classList.toggle('faction-card-ai', mode === 'ai');
+
+            updateStartButton();
+          });
         });
+      });
+
+      // Mark initial states
+      this.els.screenFaction.querySelectorAll('.faction-card').forEach(card => {
+        const fid = card.dataset.faction;
+        card.classList.toggle('faction-card-human', config[fid] === 'human');
+        card.classList.toggle('faction-card-ai', config[fid] === 'ai');
+      });
+
+      // Start game
+      document.getElementById('btn-start-game').addEventListener('click', () => {
+        const humanCount = Object.values(config).filter(v => v === 'human').length;
+        if (humanCount === 0) return;
+        CHRONOS.Audio.select();
+        this.game.startNewGame({ ...config });
       });
 
       const btnContinue = document.getElementById('btn-continue-save');
@@ -968,6 +1046,27 @@
           if (data) this.game.loadSave(data);
         });
       }
+    }
+
+    showPassDevice(nextFaction) {
+      return new Promise(resolve => {
+        const f = C.FACTIONS[nextFaction];
+        this.els.modal.classList.remove('hidden');
+        this.els.modalTitle.textContent = '🔄 CAMBIO DE JUGADOR';
+        this.els.modalBody.innerHTML = `
+          <div class="pass-device-content">
+            <div class="pass-device-emoji">${f.emoji}</div>
+            <div class="pass-device-faction" style="color:${f.color}">${f.name}</div>
+            <div class="pass-device-leader">${f.leader.name} — ${f.leader.title}</div>
+            <p class="pass-device-msg">Pasa el dispositivo al jugador de <strong style="color:${f.color}">${f.name}</strong></p>
+          </div>`;
+        this.els.modalActions.innerHTML = `<button class="btn-modal btn-ready" id="btn-pass-ready">✅ ¡LISTO!</button>`;
+        document.getElementById('btn-pass-ready').addEventListener('click', () => {
+          CHRONOS.Audio.select();
+          this.els.modal.classList.add('hidden');
+          resolve();
+        });
+      });
     }
 
     showGameScreen() {
@@ -1040,28 +1139,33 @@
         if (result.type === 'defeat') {
           CHRONOS.Audio.defeat();
           this.els.modalTitle.textContent = '💀 DERROTA';
-          this.els.modalBody.innerHTML = `<p>Has perdido todos tus distritos. El apocalipsis ganó.</p>
+          this.els.modalBody.innerHTML = `<p>Todos los jugadores humanos han sido eliminados. El apocalipsis ganó.</p>
             <p>"Al menos moriste un martes, como decía el libro."</p>
             <p class="event-effect">Sobreviviste ${result.turn} turnos.</p>`;
         } else {
-          CHRONOS.Audio.victory();
           const winner = C.FACTIONS[result.winner];
-          const isPlayer = result.winner === this.game.playerFaction;
-          this.els.modalTitle.textContent = isPlayer ? '🏆 ¡VICTORIA!' : `😱 ${winner.name} ha ganado`;
+          const isHumanWinner = this.game.isHuman(result.winner);
+          if (isHumanWinner) {
+            CHRONOS.Audio.victory();
+          } else {
+            CHRONOS.Audio.defeat();
+          }
+          this.els.modalTitle.textContent = isHumanWinner ? `🏆 ¡${winner.name} GANA!` : `😱 ${winner.name} ha ganado`;
           let bodyHtml = '';
-          if (isPlayer) {
-            bodyHtml = `<p>¡${winner.name} ha cumplido su condición de victoria!</p>`;
+          if (isHumanWinner) {
+            bodyHtml = `<p>¡${winner.emoji} ${winner.name} ha cumplido su condición de victoria!</p>`;
             bodyHtml += `<p>${C.VICTORY_CONDITIONS[result.winner].desc}</p>`;
             bodyHtml += `<p>"Y pensar que todo empezó un martes cualquiera..."</p>`;
           } else {
-            bodyHtml = `<p>${winner.name} ha alcanzado la victoria antes que tú.</p>`;
+            bodyHtml = `<p>La IA ${winner.emoji} ${winner.name} ha alcanzado la victoria.</p>`;
             bodyHtml += `<p>"En el apocalipsis, ser segundo no es una opción."</p>`;
           }
           bodyHtml += `<p class="event-effect">Turno: ${result.turn}</p>`;
           bodyHtml += `<div class="stats-grid">`;
           for (const [fid, fdata] of Object.entries(C.FACTIONS)) {
             const count = this.game.map.countFactionDistricts(fid);
-            bodyHtml += `<div style="color:${fdata.color}">${fdata.emoji} ${fdata.name}: ${count} distritos</div>`;
+            const label = this.game.isHuman(fid) ? '🎮' : '🤖';
+            bodyHtml += `<div style="color:${fdata.color}">${label} ${fdata.emoji} ${fdata.name}: ${count} distritos</div>`;
           }
           bodyHtml += `</div>`;
           this.els.modalBody.innerHTML = bodyHtml;

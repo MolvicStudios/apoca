@@ -657,3 +657,116 @@ html, body {
   cursor: pointer;
   touch-action: none;
 }
+
+/* ---- v2.0: Multiplayer Faction Select ---- */
+.faction-toggle {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 8px 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-btn:hover {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+.toggle-btn.active[data-mode="human"] {
+  border-color: var(--green);
+  background: rgba(63, 185, 80, 0.15);
+  color: var(--green);
+}
+
+.toggle-btn.active[data-mode="ai"] {
+  border-color: var(--red);
+  background: rgba(248, 81, 73, 0.15);
+  color: var(--red);
+}
+
+.faction-card-human {
+  border-color: rgba(63, 185, 80, 0.4);
+}
+
+.faction-card-ai {
+  opacity: 0.7;
+}
+
+.btn-start-game {
+  margin-top: 24px;
+  padding: 16px 48px;
+  font-size: 1.2rem;
+  font-weight: 900;
+  letter-spacing: 3px;
+  border: 2px solid var(--gold);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(210, 153, 34, 0.2), rgba(210, 153, 34, 0.05));
+  color: var(--gold);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-start-game:hover:not(:disabled) {
+  transform: scale(1.05);
+  background: rgba(210, 153, 34, 0.3);
+  box-shadow: 0 0 30px rgba(210, 153, 34, 0.2);
+}
+
+.btn-start-game:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.start-game-info {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+}
+
+/* ---- v2.0: Pass Device Screen ---- */
+.pass-device-content {
+  text-align: center;
+  padding: 16px 0;
+}
+
+.pass-device-emoji {
+  font-size: 4rem;
+  margin-bottom: 12px;
+}
+
+.pass-device-faction {
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: 3px;
+  margin-bottom: 4px;
+}
+
+.pass-device-leader {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+}
+
+.pass-device-msg {
+  font-size: 1rem;
+  color: var(--text);
+  margin-top: 12px;
+}
+
+.btn-ready {
+  font-size: 1.1rem;
+  padding: 12px 32px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}

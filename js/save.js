@@ -12,6 +12,9 @@
           version: CURRENT_VERSION,
           timestamp: Date.now(),
           playerFaction: game.playerFaction,
+          playerConfig: game.playerConfig,
+          humanPlayers: game.humanPlayers,
+          activePlayerIndex: game.activePlayerIndex,
           turn: game.turnManager.serialize(),
           map: game.map.serialize(),
           resources: game.resources.serialize(),
@@ -60,7 +63,8 @@
           faction: data.playerFaction,
           turn: data.turn?.turn || 1,
           timestamp: data.timestamp || null,
-          version: data.version || 1
+          version: data.version || 1,
+          humanPlayers: data.humanPlayers || [data.playerFaction]
         };
       } catch (e) {
         return null;
