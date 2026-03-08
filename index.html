@@ -5,7 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="google-adsense-account" content="ca-pub-1513893788851225">
   <title>CHRONOS: La Guerra por la Memoria</title>
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1513893788851225" crossorigin="anonymous"></script>
+  <script>
+    // Cargar AdSense solo si hay consentimiento, o con anuncios no personalizados si fue rechazado
+    (function() {
+      var consent = localStorage.getItem('chronos_cookie_consent');
+      if (consent === 'rejected') {
+        // Configurar anuncios no personalizados ANTES de cargar el script
+        (adsbygoogle = window.adsbygoogle || []).requestNonPersonalizedAds = 1;
+      }
+      if (consent) {
+        // Solo cargar si el usuario ya dio su decisión
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1513893788851225';
+        s.crossOrigin = 'anonymous';
+        document.head.appendChild(s);
+      }
+    })();
+  </script>
   <link rel="stylesheet" href="css/styles.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
 </head>
@@ -71,6 +88,92 @@
   <!-- ======== PANEL TECNOLÓGICO ======== -->
   <div id="tech-panel" class="hidden">
     <div id="tech-content"></div>
+  </div>
+
+  <!-- ======== BANNER DE COOKIES (RGPD / AdSense) ======== -->
+  <div id="cookie-banner" style="
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 99999;
+    background: #161B22;
+    border-top: 1px solid #30363D;
+    padding: 14px 20px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 0.85rem;
+    color: #C9D1D9;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+  ">
+    <div style="max-width: 960px; margin: 0 auto; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 240px;">
+        🍪 Este sitio utiliza cookies de Google AdSense para mostrar anuncios personalizados.
+        Consulta nuestra <a href="privacidad.html" style="color:#58A6FF;" target="_blank">Política de Privacidad</a>
+        y la página <a href="https://policies.google.com/technologies/partner-sites" style="color:#58A6FF;" target="_blank" rel="noopener">Cómo usa Google los datos</a>.
+      </div>
+      <div style="display: flex; gap: 8px; flex-shrink: 0;">
+        <button id="cookie-accept" style="
+          background: #3FB950; color: #0D1117; border: none; padding: 8px 18px;
+          border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.85rem;
+        ">Aceptar</button>
+        <button id="cookie-reject" style="
+          background: transparent; color: #8B949E; border: 1px solid #30363D; padding: 8px 18px;
+          border-radius: 6px; cursor: pointer; font-size: 0.85rem;
+        ">Solo esenciales</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    var consent = localStorage.getItem('chronos_cookie_consent');
+    var banner = document.getElementById('cookie-banner');
+
+    if (!consent) {
+      banner.style.display = 'block';
+    }
+
+    document.getElementById('cookie-accept').addEventListener('click', function() {
+      localStorage.setItem('chronos_cookie_consent', 'accepted');
+      banner.style.display = 'none';
+      // Cargar AdSense con anuncios personalizados
+      if (!document.querySelector('script[src*="adsbygoogle"]')) {
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1513893788851225';
+        s.crossOrigin = 'anonymous';
+        document.head.appendChild(s);
+      }
+    });
+
+    document.getElementById('cookie-reject').addEventListener('click', function() {
+      localStorage.setItem('chronos_cookie_consent', 'rejected');
+      banner.style.display = 'none';
+      // Cargar AdSense con anuncios NO personalizados
+      (adsbygoogle = window.adsbygoogle || []).requestNonPersonalizedAds = 1;
+      if (!document.querySelector('script[src*="adsbygoogle"]')) {
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1513893788851225';
+        s.crossOrigin = 'anonymous';
+        document.head.appendChild(s);
+      }
+    });
+  })();
+  </script>
+
+  <!-- ======== ENLACE PRIVACIDAD (visible en pantalla de selección) ======== -->
+  <div id="privacy-footer" style="
+    position: fixed;
+    bottom: 8px;
+    right: 12px;
+    z-index: 100;
+    font-size: 0.75rem;
+  ">
+    <a href="privacidad.html" target="_blank" style="color: #8B949E; text-decoration: none;">
+      Política de Privacidad
+    </a>
   </div>
 
   <!-- Scripts -->
