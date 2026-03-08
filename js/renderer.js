@@ -375,7 +375,8 @@
       const { x, y } = this.getHexCenter(q, r);
       const s = this.size;
 
-      if (!district.isVisible) {
+      if (!district.isVisible && !district.wasDiscovered) {
+        // Unknown territory
         H.drawHexPath(ctx, x, y, s);
         ctx.fillStyle = '#080C12';
         ctx.fill();
@@ -390,6 +391,31 @@
           ctx.textBaseline = 'middle';
           ctx.fillText('?', x, y);
         }
+        return;
+      }
+
+      if (!district.isVisible && district.wasDiscovered) {
+        // Explored but out of current vision — show terrain, hide units/enemies
+        const typeData = C.DISTRICT_TYPES[district.type];
+        H.drawHexPath(ctx, x, y, s);
+        ctx.fillStyle = '#0C1118';
+        ctx.fill();
+        if (typeData && lod !== 'simple') {
+          H.drawHexPath(ctx, x, y, s * 0.85);
+          ctx.fillStyle = typeData.color + '25';
+          ctx.fill();
+          ctx.font = `${s * 0.45}px serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.globalAlpha = 0.40;
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillText(typeData.icon, x, y);
+          ctx.globalAlpha = 1.0;
+        }
+        H.drawHexPath(ctx, x, y, s);
+        ctx.strokeStyle = '#252D3A';
+        ctx.lineWidth = 1;
+        ctx.stroke();
         return;
       }
 
@@ -706,7 +732,7 @@
           if (d.faction && C.FACTIONS[d.faction]) color = C.FACTIONS[d.faction].color;
           else if (d.type === 'sigma7') color = C.COLORS.sigma7;
           else color = C.COLORS.neutral;
-          ctx.fillStyle = d.isVisible ? color : (color + '40');
+          ctx.fillStyle = d.isVisible ? color : d.wasDiscovered ? (color + '55') : (color + '28');
           ctx.beginPath();
           ctx.arc(px, py, Math.max(2, 4 * scale), 0, Math.PI * 2);
           ctx.fill();

@@ -929,3 +929,24 @@ html, body {
   color: var(--gold);
 }
 .help-row span { color: var(--text); }
+
+/* ---- Unit Split Modal ---- */
+.split-units-list { display: flex; flex-direction: column; gap: 10px; }
+.split-unit-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border);
+}
+.split-unit-label { font-size: 0.9rem; flex: 1; }
+.split-unit-controls { display: flex; align-items: center; gap: 4px; }
+.split-qty-btn {
+  background: rgba(255,255,255,0.1); border: 1px solid var(--border);
+  color: var(--text); padding: 2px 8px; border-radius: 4px; cursor: pointer;
+  font-size: 0.78rem; font-weight: 700;
+}
+.split-qty-btn:hover { background: rgba(210,153,34,0.25); border-color: var(--gold); color: var(--gold); }
+.split-qty-input {
+  width: 52px; text-align: center; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); border-radius: 4px; padding: 3px 4px; font-size: 0.9rem;
+}
+.split-qty-input:focus { outline: none; border-color: var(--gold); }
+.split-unit-max { font-size: 0.75rem; color: var(--text-dim); min-width: 40px; text-align: right; }

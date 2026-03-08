@@ -107,14 +107,35 @@
     }
 
     // Move units from one hex to another
-    moveUnits(fromQ, fromR, toQ, toR, factionId, map, renderer, resources, tech) {
+    // unitsSpec: optional {[unitType]: quantity} to move only a subset (split groups)
+    moveUnits(fromQ, fromR, toQ, toR, factionId, map, renderer, resources, tech, unitsSpec = null) {
       const from = map.get(fromQ, fromR);
       const to = map.get(toQ, toR);
       if (!from || !to) return { ok: false, msg: 'Hexágono inválido' };
 
       // Collect unmoved units of this faction
-      const movingUnits = from.units.filter(u => u.faction === factionId && !u.hasMoved);
+      let movingUnits = from.units.filter(u => u.faction === factionId && !u.hasMoved);
       if (movingUnits.length === 0) return { ok: false, msg: 'No hay unidades disponibles para mover' };
+
+      // Handle split: if unitsSpec provided, move only the specified quantities
+      if (unitsSpec !== null) {
+        const selected = [];
+        for (const u of movingUnits) {
+          const qty = unitsSpec[u.type] || 0;
+          if (qty <= 0) continue;
+          if (qty >= u.quantity) {
+            selected.push(u); // move the whole stack
+          } else {
+            // Split off the requested quantity into a new stack
+            const split = { type: u.type, faction: u.faction, quantity: qty, hp: u.hp, hasMoved: false };
+            u.quantity -= qty;
+            from.units.push(split);
+            selected.push(split);
+          }
+        }
+        if (selected.length === 0) return { ok: false, msg: 'No se seleccionaron unidades' };
+        movingUnits = selected;
+      }
 
       // Check distance
       const dist = H.distance(fromQ, fromR, toQ, toR);

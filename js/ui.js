@@ -409,32 +409,7 @@
       if (g.movementRange && g.selectedHex) {
         const isValidTarget = g.movementRange.some(h => h.q === hex.q && h.r === hex.r);
         if (isValidTarget) {
-          const result = g.unitManager.moveUnits(
-            g.selectedHex.q, g.selectedHex.r,
-            hex.q, hex.r,
-            g.playerFaction, g.map, g.renderer, g.resources, g.tech
-          );
-          if (result.ok) {
-            if (result.combat) {
-              CHRONOS.Audio.combat();
-              if (result.won) {
-                CHRONOS.Audio.conquest();
-                if (g.stats) { g.stats.combatWon++; g.stats.districtsConquered++; }
-              } else {
-                if (g.stats) g.stats.combatLost++;
-              }
-              g.turnManager.addLog(`⚔️ ${result.msg}`, hex.q, hex.r);
-            } else {
-              CHRONOS.Audio.select();
-              g.turnManager.addLog(`🚶 Unidades movidas a (${hex.q},${hex.r})`, hex.q, hex.r);
-            }
-            g.map.updateVisibility(g.playerFaction, g.tech);
-          } else {
-            this._showToast(result.msg);
-          }
-          g.selectedHex = null;
-          g.movementRange = null;
-          this.update();
+          this._showUnitSplitModal(g.selectedHex, { q: hex.q, r: hex.r });
           return;
         }
       }
@@ -1421,6 +1396,120 @@
           resolve();
         });
       });
+    }
+
+    // ================================================================
+    // Mover unidades (con selector de división de grupo)
+    // ================================================================
+    _showUnitSplitModal(fromHex, toHex) {
+      const g = this.game;
+      const from = g.map.get(fromHex.q, fromHex.r);
+      const movableUnits = from.units.filter(u => u.faction === g.playerFaction && !u.hasMoved);
+      if (movableUnits.length === 0) {
+        g.selectedHex = null;
+        g.movementRange = null;
+        this.update();
+        return;
+      }
+
+      let bodyHtml = `<div class="split-units-list">`;
+      for (const u of movableUnits) {
+        const ud = C.UNITS[u.type];
+        if (!ud) continue;
+        bodyHtml += `
+          <div class="split-unit-row">
+            <span class="split-unit-label">${ud.icon} ${ud.name}</span>
+            <div class="split-unit-controls">
+              <button class="split-qty-btn" data-type="${u.type}" data-action="min">0</button>
+              <input type="number" class="split-qty-input" data-type="${u.type}"
+                value="${u.quantity}" min="0" max="${u.quantity}">
+              <button class="split-qty-btn" data-type="${u.type}" data-action="max">${u.quantity}</button>
+            </div>
+            <span class="split-unit-max">de ${u.quantity}</span>
+          </div>`;
+      }
+      bodyHtml += `</div>`;
+
+      this.els.modalTitle.textContent = `⚔️ Mover unidades → (${toHex.q}, ${toHex.r})`;
+      this.els.modalBody.innerHTML = bodyHtml;
+      this.els.modalActions.innerHTML = `
+        <button class="btn-modal" id="btn-split-all">✊ Mover Todo</button>
+        <button class="btn-modal" id="btn-split-selected">✂️ Mover Selección</button>
+        <button class="btn-modal" id="btn-split-cancel">✖ Cancelar</button>`;
+      this.els.modal.classList.remove('hidden');
+
+      // Min/Max quick buttons
+      this.els.modalBody.querySelectorAll('.split-qty-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const input = btn.closest('.split-unit-row').querySelector('.split-qty-input');
+          input.value = btn.dataset.action === 'min' ? 0 : input.max;
+        });
+      });
+
+      document.getElementById('btn-split-all').addEventListener('click', () => {
+        this.els.modal.classList.add('hidden');
+        this._executeMoveUnits(fromHex, toHex, null);
+      });
+
+      document.getElementById('btn-split-selected').addEventListener('click', () => {
+        const spec = {};
+        this.els.modalBody.querySelectorAll('.split-qty-input').forEach(inp => {
+          spec[inp.dataset.type] = Math.max(0, parseInt(inp.value) || 0);
+        });
+        this.els.modal.classList.add('hidden');
+        this._executeMoveUnits(fromHex, toHex, spec);
+      });
+
+      document.getElementById('btn-split-cancel').addEventListener('click', () => {
+        this.els.modal.classList.add('hidden');
+      });
+    }
+
+    _executeMoveUnits(fromHex, toHex, unitsSpec) {
+      const g = this.game;
+      const result = g.unitManager.moveUnits(
+        fromHex.q, fromHex.r,
+        toHex.q, toHex.r,
+        g.playerFaction, g.map, g.renderer, g.resources, g.tech,
+        unitsSpec
+      );
+      if (result.ok) {
+        if (result.combat) {
+          CHRONOS.Audio.combat();
+          if (result.won) {
+            CHRONOS.Audio.conquest();
+            if (g.stats) { g.stats.combatWon++; g.stats.districtsConquered++; }
+          } else {
+            if (g.stats) g.stats.combatLost++;
+          }
+          g.turnManager.addLog(`⚔️ ${result.msg}`, toHex.q, toHex.r);
+        } else {
+          CHRONOS.Audio.select();
+          g.turnManager.addLog(`🚶 Unidades movidas a (${toHex.q},${toHex.r})`, toHex.q, toHex.r);
+        }
+        const newlyDiscovered = g.map.updateVisibility(g.playerFaction, g.tech);
+        this._handleDiscoveries(newlyDiscovered);
+      } else {
+        this._showToast(result.msg);
+      }
+      g.selectedHex = null;
+      g.movementRange = null;
+      this.update();
+    }
+
+    _handleDiscoveries(newlyDiscovered) {
+      if (!newlyDiscovered || newlyDiscovered.length === 0) return;
+      const g = this.game;
+      for (const d of newlyDiscovered) {
+        if (d.bonusResources && Object.keys(d.bonusResources).length > 0) {
+          g.resources.add(g.playerFaction, d.bonusResources);
+          const resStr = Object.entries(d.bonusResources)
+            .map(([k, v]) => `+${v}${this._resIcon(k)}`).join(' ');
+          g.turnManager.addLog(`✨ ¡Descubrimiento en (${d.q},${d.r})! ${resStr}`, d.q, d.r);
+          this._showToast(`✨ Recursos encontrados: ${resStr}`);
+          d.bonusResources = null;
+        }
+      }
     }
 
     _showToast(msg) {

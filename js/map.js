@@ -14,7 +14,9 @@
       this.population = faction ? 20 : (type === 'paramo' ? 0 : 5);
       this.buildings = [];          // [{type, turnsLeft}]
       this.units = [];              // [{type, faction, quantity, hp, hasMoved}]
-      this.isVisible = false;       // fog of war
+      this.isVisible = false;       // currently in vision range
+      this.wasDiscovered = false;   // ever been seen (persistent fog)
+      this.bonusResources = null;   // resources granted on first discovery
       this.siegeTurns = 0;          // siege counter
       this.justConquered = false;
     }
@@ -139,6 +141,23 @@
 
       // Ensure some neutral districts near sigma-7 have variety
       this.grid[3][3].population = 50;
+
+      // Assign bonus resources to ~22% of neutral non-paramo tiles
+      const bonusPools = [
+        { food: 30 }, { food: 25, morale: 5 },
+        { materials: 35 }, { materials: 20, energy: 10 },
+        { energy: 25 }, { energy: 15, credits: 15 },
+        { credits: 30 }, { food: 20, materials: 15 },
+        { materials: 25, credits: 10 }, { energy: 20, materials: 10 }
+      ];
+      for (let q = 0; q < this.width; q++) {
+        for (let r = 0; r < this.height; r++) {
+          const d = this.grid[q][r];
+          if (!d.faction && d.type !== 'paramo' && Math.random() < 0.22) {
+            d.bonusResources = { ...bonusPools[Math.floor(Math.random() * bonusPools.length)] };
+          }
+        }
+      }
     }
 
     get(q, r) {
@@ -167,21 +186,28 @@
     }
 
     updateVisibility(playerFaction, tech) {
-      // Reset all
+      // Reset current visibility (preserving wasDiscovered for persistent fog)
       for (const d of this.getAllDistricts()) d.isVisible = false;
 
       const bonuses = tech ? tech.getBonuses(playerFaction) : {};
       const extraVision = bonuses.visionBonus || 0;
+      const newlyDiscovered = [];
+
+      const markVisible = (d) => {
+        if (!d.wasDiscovered) newlyDiscovered.push(d);
+        d.isVisible = true;
+        d.wasDiscovered = true;
+      };
 
       // Full map vision tech (s_vigil)
       if (extraVision >= 99) {
-        for (const d of this.getAllDistricts()) d.isVisible = true;
-        return;
+        for (const d of this.getAllDistricts()) markVisible(d);
+        return newlyDiscovered;
       }
 
       // Player's districts + adjacent (+ extra range from tech)
       for (const d of this.getFactionsDistricts(playerFaction)) {
-        d.isVisible = true;
+        markVisible(d);
         // BFS for vision range
         const visited = new Set();
         const queue = [{ q: d.q, r: d.r, dist: 0 }];
@@ -195,7 +221,7 @@
                 visited.add(key);
                 const nd = this.get(n.q, n.r);
                 if (nd) {
-                  nd.isVisible = true;
+                  markVisible(nd);
                   if (cur.dist + 1 < 1 + extraVision) {
                     queue.push({ q: n.q, r: n.r, dist: cur.dist + 1 });
                   }
@@ -205,6 +231,7 @@
           }
         }
       }
+      return newlyDiscovered;
     }
 
     countFactionDistricts(factionId) {
@@ -225,7 +252,9 @@
             q: d.q, r: d.r, type: d.type, faction: d.faction,
             population: d.population, buildings: [...d.buildings],
             units: d.units.map(u => ({ ...u })),
-            siegeTurns: d.siegeTurns
+            siegeTurns: d.siegeTurns,
+            wasDiscovered: d.wasDiscovered,
+            bonusResources: d.bonusResources
           };
         }
       }
@@ -243,6 +272,8 @@
           d.buildings = s.buildings || [];
           d.units = s.units || [];
           d.siegeTurns = s.siegeTurns || 0;
+          d.wasDiscovered = s.wasDiscovered || false;
+          d.bonusResources = s.bonusResources || null;
           this.grid[q][r] = d;
         }
       }
