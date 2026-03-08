@@ -111,7 +111,9 @@
           if (g.isHuman(fid)) {
             this.addLog(`🔬 ${C.FACTIONS[fid].emoji} ¡Investigación completada: ${completed.name}!`);
             g.renderer.showPhaseBanner(`🔬 ${completed.name}`, '#A371F7');
+            CHRONOS.Audio.research();
             await g.ui.showNotification(`🔬 ${C.FACTIONS[fid].emoji} ¡${completed.name} investigado!`);
+            if (g.stats) g.stats.techResearched++;
           }
         }
 
@@ -153,6 +155,16 @@
         return;
       }
 
+      // ---- Autoguardado antes de avanzar turno ----
+      CHRONOS.Save.save(g, 'auto');
+
+      // ---- Actualizar estadísticas ----
+      if (g.stats) {
+        g.stats.turnsPlayed = this.turn;
+        const myCount = g.map.countFactionDistricts(g.humanPlayers[0]);
+        g.stats.maxDistricts = Math.max(g.stats.maxDistricts || 0, myCount);
+      }
+
       // ---- Next turn ----
       this.turn++;
       this.phase = 'waiting';
@@ -160,6 +172,19 @@
       const firstHuman = g.humanPlayers[0];
       this.addLog(`═══════ Turno ${this.turn} ═══════`);
       this.addLog(`${C.FACTIONS[firstHuman].emoji} Turno de ${C.FACTIONS[firstHuman].name}`);
+
+      // ---- Hitos de turno ----
+      const milestoneMsg = {
+        5: '🌟 ¡5 turnos superviviendo!',
+        10: '🔥 ¡10 turnos en el apocalipsis!',
+        25: '⚡ ¡25 turnos! Eres un veterano.',
+        50: '🏆 ¡50 turnos! Leyenda viviente.',
+        100: '💯 ¡100 turnos! ¿Eres humano?'
+      };
+      if (milestoneMsg[this.turn]) {
+        g.ui._showToast(milestoneMsg[this.turn]);
+        CHRONOS.Audio.milestone();
+      }
 
       // In multiplayer, show pass-device screen for first player of new turn
       if (g.humanPlayers.length > 1) {

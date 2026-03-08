@@ -16,6 +16,9 @@
       this.humanPlayers = [];       // ordered list of human faction IDs
       this.activePlayerIndex = 0;   // index into humanPlayers for current sub-turn
 
+      // Estadísticas de partida
+      this.stats = null;
+
       // Systems
       this.map = new CHRONOS.GameMap();
       this.resources = new CHRONOS.ResourceManager();
@@ -55,6 +58,18 @@
       this.playerFaction = this.humanPlayers[0] || Object.keys(config)[0];
       this.selectedHex = null;
       this.movementRange = null;
+
+      // Inicializar estadísticas
+      this.stats = {
+        districtsConquered: 0,
+        combatWon: 0,
+        combatLost: 0,
+        buildingsBuilt: 0,
+        unitsRecruited: 0,
+        techResearched: 0,
+        turnsPlayed: 1,
+        maxDistricts: 3
+      };
 
       // Generate map
       this.map.generate();
@@ -129,6 +144,18 @@
       this.tech.deserialize(data.tech);
       this.turnManager = new CHRONOS.TurnManager(this);
       this.turnManager.deserialize(data.turn);
+
+      // Restaurar estadísticas
+      this.stats = data.stats || {
+        districtsConquered: 0,
+        combatWon: 0,
+        combatLost: 0,
+        buildingsBuilt: 0,
+        unitsRecruited: 0,
+        techResearched: 0,
+        turnsPlayed: this.turnManager.turn,
+        maxDistricts: 0
+      };
 
       this.map.updateVisibility(this.playerFaction, this.tech);
 

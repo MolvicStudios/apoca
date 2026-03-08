@@ -468,9 +468,14 @@
 
       if (district.units.length > 0) {
         const totalUnits = district.getTotalUnits();
+        // Verificar si todas las unidades de la facción ya se movieron
+        const allMoved = district.units.length > 0 &&
+          district.units.every(u => u.hasMoved);
         ctx.font = `bold ${s * 0.22}px monospace`;
-        ctx.fillStyle = '#FFD700';
+        ctx.fillStyle = allMoved ? '#888844' : '#FFD700';
+        ctx.globalAlpha = allMoved ? 0.6 : 1.0;
         ctx.fillText(`⚔${totalUnits}`, x, y + s * 0.55);
+        ctx.globalAlpha = 1.0;
       }
 
       if (district.buildings.length > 0) {

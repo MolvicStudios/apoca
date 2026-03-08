@@ -97,17 +97,17 @@
       });
 
       this.els.btnSave.addEventListener('click', () => {
-        if (CHRONOS.Save.save(g)) this._showToast('💾 Partida guardada');
+        if (CHRONOS.Save.save(g, 1)) this._showToast('💾 Guardado en Slot 1');
         else this._showToast('❌ Error al guardar');
       });
 
       this.els.btnLoad.addEventListener('click', () => {
-        const data = CHRONOS.Save.load();
+        const data = CHRONOS.Save.load(1);
         if (data) {
           g.loadSave(data);
-          this._showToast('📂 Partida cargada');
+          this._showToast('📂 Partida cargada (Slot 1)');
         } else {
-          this._showToast('❌ No hay partida guardada');
+          this._showToast('❌ No hay partida guardada en Slot 1');
         }
       });
 
@@ -417,7 +417,12 @@
           if (result.ok) {
             if (result.combat) {
               CHRONOS.Audio.combat();
-              if (result.won) CHRONOS.Audio.conquest();
+              if (result.won) {
+                CHRONOS.Audio.conquest();
+                if (g.stats) { g.stats.combatWon++; g.stats.districtsConquered++; }
+              } else {
+                if (g.stats) g.stats.combatLost++;
+              }
               g.turnManager.addLog(`⚔️ ${result.msg}`, hex.q, hex.r);
             } else {
               CHRONOS.Audio.select();
@@ -478,6 +483,18 @@
           return;
         }
 
+        // Enter → Terminar turno
+        if (e.key === 'Enter') {
+          const btn = this.els.btnEndTurn;
+          if (!btn.disabled && g.turnManager.phase === 'waiting') {
+            CHRONOS.Audio.endTurn();
+            g.selectedHex = null;
+            g.movementRange = null;
+            g.turnManager.endTurn();
+          }
+          return;
+        }
+
         // Space → hold for pan
         if (e.code === 'Space') {
           e.preventDefault();
@@ -487,6 +504,17 @@
         // Home or H → center on capital
         if (e.key === 'Home' || e.key === 'h' || e.key === 'H') {
           this._centerOnCapital();
+        }
+
+        // T → toggle tech panel
+        if (e.key === 't' || e.key === 'T') {
+          this.els.techPanel.classList.toggle('hidden');
+          if (!this.els.techPanel.classList.contains('hidden')) this.updateTechPanel();
+        }
+
+        // ? → mostrar atajos de teclado
+        if (e.key === '?' || e.key === '/') {
+          this._showHelpModal();
         }
 
         // + / - zoom
@@ -532,6 +560,30 @@
       );
     }
 
+    _showHelpModal() {
+      const g = this.game;
+      if (!g.playerFaction) return;
+      this.els.modal.classList.remove('hidden');
+      this.els.modalTitle.textContent = '⌨️ Atajos de Teclado';
+      this.els.modalBody.innerHTML = `
+        <div class="help-grid">
+          <div class="help-row"><kbd>Enter</kbd><span>Terminar turno</span></div>
+          <div class="help-row"><kbd>Esc</kbd><span>Menú pausa / Cerrar panel</span></div>
+          <div class="help-row"><kbd>T</kbd><span>Panel de Investigación</span></div>
+          <div class="help-row"><kbd>H</kbd><span>Centrar en capital</span></div>
+          <div class="help-row"><kbd>+/-</kbd><span>Zoom</span></div>
+          <div class="help-row"><kbd>Espacio</kbd><span>Mantener = modo paneo</span></div>
+          <div class="help-row"><kbd>?</kbd><span>Esta ayuda</span></div>
+          <div class="help-row"><kbd>🖱️ Doble clic</kbd><span>Zoom al hexágono</span></div>
+          <div class="help-row"><kbd>🖱️ Botón derecho</kbd><span>Paneo del mapa</span></div>
+          <div class="help-row"><kbd>📦 Minimap</kbd><span>Clic para navegar</span></div>
+        </div>`;
+      this.els.modalActions.innerHTML = `<button class="btn-modal" id="btn-modal-ok">¡Entendido!</button>`;
+      document.getElementById('btn-modal-ok').addEventListener('click', () => {
+        this.els.modal.classList.add('hidden');
+      });
+    }
+
     // ================================================================
     // Pause Menu
     // ================================================================
@@ -549,8 +601,8 @@
         <div class="pause-box">
           <div class="pause-title">⚙️ MENÚ</div>
           <button class="btn-modal pause-btn" data-action="resume">▶ Continuar</button>
-          <button class="btn-modal pause-btn" data-action="save">💾 Guardar</button>
-          <button class="btn-modal pause-btn" data-action="load">📂 Cargar</button>
+          <button class="btn-modal pause-btn" data-action="saves">💾 Guardar / Cargar</button>
+          <button class="btn-modal pause-btn" data-action="help">❓ Atajos de Teclado</button>
           <button class="btn-modal pause-btn" data-action="new">🔄 Nueva Partida</button>
           <button class="btn-modal pause-btn" data-action="exit">🚪 Salir al Menú</button>
         </div>
@@ -563,13 +615,10 @@
           const action = btn.dataset.action;
           div.remove();
           this.els.pauseMenu = null;
-          if (action === 'save') {
-            if (CHRONOS.Save.save(g)) this._showToast('💾 Partida guardada');
-            else this._showToast('❌ Error al guardar');
-          } else if (action === 'load') {
-            const data = CHRONOS.Save.load();
-            if (data) { g.loadSave(data); this._showToast('📂 Partida cargada'); }
-            else this._showToast('❌ No hay partida guardada');
+          if (action === 'saves') {
+            this._showSaveLoadModal();
+          } else if (action === 'help') {
+            this._showHelpModal();
           } else if (action === 'new' || action === 'exit') {
             CHRONOS.Audio.stopAmbient();
             this.showFactionSelect();
@@ -580,6 +629,72 @@
       div.querySelector('.pause-overlay').addEventListener('click', () => {
         div.remove();
         this.els.pauseMenu = null;
+      });
+    }
+
+    _showSaveLoadModal() {
+      const g = this.game;
+      this.els.modal.classList.remove('hidden');
+      this.els.modalTitle.textContent = '💾 Guardar / Cargar Partida';
+
+      const renderSlots = () => {
+        const saves = CHRONOS.Save.listSaves();
+        let html = '<div class="save-slots">';
+        for (const { slot, info } of saves) {
+          let slotDesc = '— vacío —';
+          if (info) {
+            const f = C.FACTIONS[info.faction];
+            const date = info.timestamp ? new Date(info.timestamp).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '';
+            slotDesc = `${f ? f.emoji + ' ' + f.name : '?'} | T${info.turn} | ${date}`;
+          }
+          html += `<div class="save-slot-row">`;
+          html += `<span class="save-slot-label">Slot ${slot}:</span>`;
+          html += `<span class="save-slot-desc">${slotDesc}</span>`;
+          html += `<button class="btn-modal save-slot-btn" data-slot="${slot}" data-action="save">Guardar</button>`;
+          if (info) html += `<button class="btn-modal save-slot-btn" data-slot="${slot}" data-action="load">Cargar</button>`;
+          html += `</div>`;
+        }
+
+        // Autoguardado
+        const autoInfo = CHRONOS.Save.getSaveInfo('auto');
+        if (autoInfo) {
+          const f = C.FACTIONS[autoInfo.faction];
+          const date = autoInfo.timestamp ? new Date(autoInfo.timestamp).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '';
+          html += `<div class="save-slot-row save-slot-auto">`;
+          html += `<span class="save-slot-label">⚡ Auto:</span>`;
+          html += `<span class="save-slot-desc">${f ? f.emoji + ' ' + f.name : '?'} | T${autoInfo.turn} | ${date}</span>`;
+          html += `<button class="btn-modal save-slot-btn" data-slot="auto" data-action="load">Cargar</button>`;
+          html += `</div>`;
+        }
+        html += '</div>';
+        this.els.modalBody.innerHTML = html;
+
+        this.els.modalBody.querySelectorAll('.save-slot-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const slot = btn.dataset.slot === 'auto' ? 'auto' : parseInt(btn.dataset.slot);
+            const action = btn.dataset.action;
+            if (action === 'save') {
+              if (CHRONOS.Save.save(g, slot)) this._showToast(`💾 Guardado en Slot ${slot}`);
+              else this._showToast('❌ Error al guardar');
+              renderSlots();
+            } else if (action === 'load') {
+              const data = CHRONOS.Save.load(slot);
+              if (data) {
+                this.els.modal.classList.add('hidden');
+                g.loadSave(data);
+                this._showToast(`📂 Partida cargada (Slot ${slot})`);
+              } else {
+                this._showToast('❌ No hay partida en ese slot');
+              }
+            }
+          });
+        });
+      };
+
+      renderSlots();
+      this.els.modalActions.innerHTML = `<button class="btn-modal" id="btn-modal-ok">Cerrar</button>`;
+      document.getElementById('btn-modal-ok').addEventListener('click', () => {
+        this.els.modal.classList.add('hidden');
       });
     }
 
@@ -693,6 +808,9 @@
             html += `${ud.icon} ${ud.name} ×${u.quantity}${u.faction === g.playerFaction ? movedIcon : ''}`;
             html += `<span class="unit-stats">⚔${ud.atk} 🛡${ud.def}</span>`;
             html += `</div>`;
+            if (ud.special) {
+              html += `<div class="unit-special">✨ ${ud.special}</div>`;
+            }
           }
         }
         html += `</div>`;
@@ -742,6 +860,7 @@
             const result = g.buildings.build(d, bid, g.playerFaction, g.resources);
             CHRONOS.Audio.build();
             g.renderer.addBuildAnimation(bq, br);
+            if (result.ok && g.stats) g.stats.buildingsBuilt++;
             this._showToast(result.msg);
             this.update();
             this.showDistrictPanel(d);
@@ -757,7 +876,10 @@
           const d = g.map.get(uq, ur);
           if (d) {
             const result = g.unitManager.recruit(d, uid, g.playerFaction, g.resources);
-            if (result.ok) CHRONOS.Audio.recruit();
+            if (result.ok) {
+              CHRONOS.Audio.recruit();
+              if (g.stats) g.stats.unitsRecruited++;
+            }
             this._showToast(result.msg);
             this.update();
             this.showDistrictPanel(d);
@@ -803,20 +925,33 @@
         this.els.resSpecialIcon.title = spec.name + ': ' + spec.desc;
       }
 
-      // Morale color
+      // Morale color + warning pulsante
+      const moraleGroup = this.els.resMorale?.closest('.res-group');
       if (res.morale < C.COMBAT.MORALE_THRESHOLD_LOW) {
         this.els.resMorale.style.color = '#F85149';
+        if (moraleGroup) moraleGroup.classList.add('morale-critical');
       } else if (res.morale > C.COMBAT.MORALE_THRESHOLD_HIGH) {
         this.els.resMorale.style.color = '#3FB950';
+        if (moraleGroup) moraleGroup.classList.remove('morale-critical');
       } else {
         this.els.resMorale.style.color = C.COLORS.text;
+        if (moraleGroup) moraleGroup.classList.remove('morale-critical');
       }
+
+      // Advertencia de hambre
+      const foodGroup = this.els.resFood?.closest('.res-group');
+      if (foodGroup) foodGroup.classList.toggle('res-critical', res.food <= 0);
 
       // Store for next comparison
       this._prevResources = { ...res };
 
       this.updateLog();
       this.els.btnEndTurn.disabled = g.turnManager.phase !== 'waiting';
+
+      // Panel por defecto cuando no hay hex seleccionado
+      if (!g.selectedHex) {
+        this.showDefaultPanel();
+      }
     }
 
     _updateResValue(el, value, key) {
@@ -841,10 +976,20 @@
       let html = '';
       const recent = g.turnManager.log.slice(-10);
       for (const entry of recent) {
+        // Clase de color según tipo de entrada
+        let cls = 'log-entry';
+        const m = entry.msg;
+        if (m.startsWith('⚔') || m.includes('combate') || m.includes('Bajas')) cls += ' log-combat';
+        else if (m.startsWith('🔨') || m.startsWith('✅') || m.startsWith('🔬')) cls += ' log-build';
+        else if (m.startsWith('🚶')) cls += ' log-move';
+        else if (m.startsWith('🎲')) cls += ' log-event';
+        else if (m.startsWith('═')) cls += ' log-turn';
+        else if (m.startsWith('📦') || m.startsWith('🤝')) cls += ' log-phase';
+
         if (entry.q !== undefined && entry.r !== undefined) {
-          html += `<div class="log-entry log-clickable" data-q="${entry.q}" data-r="${entry.r}">${entry.msg}</div>`;
+          html += `<div class="${cls} log-clickable" data-q="${entry.q}" data-r="${entry.r}">${entry.msg}</div>`;
         } else {
-          html += `<div class="log-entry">${entry.msg}</div>`;
+          html += `<div class="${cls}">${entry.msg}</div>`;
         }
       }
       this.els.logContainer.innerHTML = html;
@@ -861,8 +1006,85 @@
       });
     }
 
-    updateTechPanel() {
+    // ================================================================
+    // Default Panel (vista general cuando no hay hex seleccionado)
+    // ================================================================
+    showDefaultPanel() {
       const g = this.game;
+      const vc = C.VICTORY_CONDITIONS[g.playerFaction];
+      const total = g.map.getTotalDistricts();
+      const myCount = g.map.countFactionDistricts(g.playerFaction);
+
+      let html = '';
+
+      // Progreso hacia victoria
+      html += '<div class="panel-section">';
+      html += '<div class="panel-subtitle">🏆 Condición de Victoria</div>';
+      html += `<div class="panel-label">${vc.desc}</div>`;
+
+      let progress = 0;
+      let progressLabel = '';
+      if (vc.type === 'domination') {
+        progress = (myCount / total) / vc.threshold;
+        progressLabel = `${myCount} / ${Math.ceil(total * vc.threshold)} distritos`;
+      } else if (vc.type === 'liberation') {
+        progress = (myCount / total) / vc.threshold;
+        progressLabel = `${myCount} / ${Math.ceil(total * vc.threshold)} distritos`;
+      } else if (vc.type === 'survival') {
+        progress = g.turnManager.turn / vc.threshold;
+        progressLabel = `Turno ${g.turnManager.turn} / ${vc.threshold}`;
+      } else if (vc.type === 'annihilation') {
+        const others = Object.keys(C.FACTIONS).filter(f => f !== g.playerFaction);
+        const alive = others.filter(f => g.map.countFactionDistricts(f) > 0).length;
+        progress = (others.length - alive) / others.length;
+        progressLabel = `${others.length - alive} / ${others.length} facciones eliminadas`;
+      }
+
+      const pct = Math.min(100, Math.round(progress * 100));
+      const pctColor = pct >= 80 ? '#3FB950' : pct >= 50 ? '#D29922' : '#58A6FF';
+      html += `<div class="victory-progress-bar"><div class="victory-progress-fill" style="width:${pct}%;background:${pctColor}"></div></div>`;
+      html += `<div class="panel-value">${progressLabel} — ${pct}%</div>`;
+      html += '</div>';
+
+      // Mapa resumen
+      html += '<div class="panel-section">';
+      html += '<div class="panel-subtitle">🗺️ Control del Mapa</div>';
+      for (const [fid, fdata] of Object.entries(C.FACTIONS)) {
+        const cnt = g.map.countFactionDistricts(fid);
+        const pctMap = Math.round((cnt / total) * 100);
+        const label = g.isHuman(fid) ? '🎮' : '🤖';
+        html += `<div class="faction-map-row">`;
+        html += `<span style="color:${fdata.color}">${label}${fdata.emoji} ${fdata.name}</span>`;
+        html += `<span class="faction-map-count">${cnt} (${pctMap}%)</span>`;
+        html += `</div>`;
+        html += `<div class="faction-map-bar"><div style="width:${pctMap}%;background:${fdata.color}55;border:1px solid ${fdata.color}"></div></div>`;
+      }
+      html += '</div>';
+
+      // Investigación actual
+      const current = g.tech.getCurrentResearch(g.playerFaction);
+      if (current) {
+        const tree = C.TECH_TREES[g.playerFaction];
+        const tech = tree?.find(t => t.id === current.id);
+        if (tech) {
+          html += '<div class="panel-section">';
+          html += '<div class="panel-subtitle">🔬 Investigando</div>';
+          html += `<div class="building-item">${tech.icon} ${tech.name}</div>`;
+          const pctR = Math.round((1 - current.turnsLeft / current.totalTurns) * 100);
+          html += `<div class="tech-progress"><div class="tech-bar" style="width:${pctR}%"></div></div>`;
+          html += `<div style="font-size:0.75rem;color:var(--text-dim);margin-top:2px">${current.turnsLeft} turnos restantes</div>`;
+          html += '</div>';
+        }
+      }
+
+      html += '<div class="panel-section"><div style="color:var(--text-dim);font-size:0.73rem;line-height:1.5">';
+      html += '📌 Clic en hex para seleccionar<br>⌨️ <kbd style="background:rgba(255,255,255,0.1);padding:1px 4px;border-radius:3px">?</kbd> para atajos de teclado</div></div>';
+
+      this.els.panelTitle.textContent = '📊 VISIÓN GENERAL';
+      this.els.panelContent.innerHTML = html;
+    }
+
+    updateTechPanel() {      const g = this.game;
       const techs = g.tech.getAllTechs(g.playerFaction);
       const researched = g.tech.getResearched(g.playerFaction);
       const current = g.tech.getCurrentResearch(g.playerFaction);
@@ -948,8 +1170,8 @@
       html += '<div class="faction-select-version">v2.0 — Multijugador Local</div>';
       html += '<div class="faction-select-desc">Configura cada facción: HUMANO o IA</div>';
 
-      if (CHRONOS.Save.hasSave()) {
-        const info = CHRONOS.Save.getSaveInfo();
+      if (CHRONOS.Save.hasSave(1)) {
+        const info = CHRONOS.Save.getSaveInfo(1);
         let infoStr = '';
         if (info) {
           const f = C.FACTIONS[info.faction];
@@ -1042,7 +1264,7 @@
       const btnContinue = document.getElementById('btn-continue-save');
       if (btnContinue) {
         btnContinue.addEventListener('click', () => {
-          const data = CHRONOS.Save.load();
+          const data = CHRONOS.Save.load(1);
           if (data) this.game.loadSave(data);
         });
       }
@@ -1134,6 +1356,7 @@
 
     showGameEnd(result) {
       return new Promise(resolve => {
+        const g = this.game;
         this.els.modal.classList.remove('hidden');
 
         if (result.type === 'defeat') {
@@ -1169,6 +1392,26 @@
           }
           bodyHtml += `</div>`;
           this.els.modalBody.innerHTML = bodyHtml;
+        }
+
+        // Estadísticas de partida
+        if (g.stats) {
+          const s = g.stats;
+          const statsHtml = `
+            <div class="game-stats-panel">
+              <div class="panel-subtitle" style="margin-bottom:6px">📊 Estadísticas</div>
+              <div class="game-stats-grid">
+                <span>⚔️ Combates ganados</span><span>${s.combatWon}</span>
+                <span>💀 Combates perdidos</span><span>${s.combatLost}</span>
+                <span>🏴 Distritos conquistados</span><span>${s.districtsConquered}</span>
+                <span>🔨 Edificios construidos</span><span>${s.buildingsBuilt}</span>
+                <span>👥 Unidades reclutadas</span><span>${s.unitsRecruited}</span>
+                <span>🔬 Tecnologías investigadas</span><span>${s.techResearched}</span>
+                <span>🗺️ Máximo de distritos</span><span>${s.maxDistricts}</span>
+                <span>⏱️ Turnos jugados</span><span>${s.turnsPlayed}</span>
+              </div>
+            </div>`;
+          this.els.modalBody.innerHTML += statsHtml;
         }
 
         this.els.modalActions.innerHTML = `<button class="btn-modal" id="btn-new-game">🔄 Nueva Partida</button>`;

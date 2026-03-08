@@ -7,12 +7,26 @@
   class EventManager {
     constructor() {
       this.lastEvent = null;
+      this.recentEventIds = []; // evita repetir los últimos 5 eventos
     }
 
     rollEvent(turn) {
-      if (Math.random() > 0.4) return null; // 40% chance
-      const pool = C.EVENTS;
+      // Probabilidad escala: 30% en turno 1 → 50% en turno 41+
+      const probability = Math.min(0.5, 0.3 + (turn - 1) * 0.005);
+      if (Math.random() > probability) return null;
+
+      // Filtrar eventos recientes para evitar repeticiones inmediatas
+      let pool = C.EVENTS.filter(e => !this.recentEventIds.includes(e.id));
+      if (pool.length < 5) {
+        pool = C.EVENTS; // fallback si el pool es muy pequeño
+        this.recentEventIds = [];
+      }
+
       const event = pool[Math.floor(Math.random() * pool.length)];
+
+      this.recentEventIds.push(event.id);
+      if (this.recentEventIds.length > 5) this.recentEventIds.shift();
+
       this.lastEvent = event;
       return event;
     }

@@ -770,3 +770,162 @@ html, body {
   font-weight: 700;
   letter-spacing: 2px;
 }
+
+/* ---- v3.0: Log entry color coding ---- */
+.log-combat { color: var(--red) !important; }
+.log-build  { color: var(--purple) !important; }
+.log-move   { color: #D29922; }
+.log-event  { color: var(--gold); font-style: italic; }
+.log-turn   { color: var(--text-dim); font-weight: 700; letter-spacing: 1px; }
+.log-phase  { color: var(--blue); opacity: 0.7; }
+
+/* ---- v3.0: Morale critical pulsing warning ---- */
+@keyframes morale-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(248, 81, 73, 0); }
+  50%       { box-shadow: 0 0 6px 2px rgba(248, 81, 73, 0.5); }
+}
+.morale-critical {
+  animation: morale-pulse 1.2s ease-in-out infinite;
+  border-color: var(--red) !important;
+}
+
+/* ---- v3.0: Food/Energy critical ---- */
+@keyframes res-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+.res-critical {
+  animation: res-blink 1s ease-in-out infinite;
+  border-color: var(--red) !important;
+}
+
+/* ---- v3.0: Victory progress bar ---- */
+.victory-progress-bar {
+  height: 8px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 4px 0;
+  border: 1px solid var(--border);
+}
+.victory-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+  background: var(--blue);
+}
+
+/* ---- v3.0: Faction map rows in default panel ---- */
+.faction-map-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  margin-bottom: 2px;
+}
+.faction-map-count {
+  font-family: monospace;
+  color: var(--text-dim);
+}
+.faction-map-bar {
+  height: 4px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+.faction-map-bar > div {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s;
+}
+
+/* ---- v3.0: Unit special ability ---- */
+.unit-special {
+  font-size: 0.72rem;
+  color: var(--purple);
+  font-style: italic;
+  padding: 0 0 3px 4px;
+  opacity: 0.9;
+}
+
+/* ---- v3.0: Save slots modal ---- */
+.save-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.save-slot-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.save-slot-auto {
+  border-color: rgba(88,166,255,0.3);
+}
+.save-slot-label {
+  font-weight: 700;
+  font-family: monospace;
+  color: var(--gold);
+  white-space: nowrap;
+  min-width: 48px;
+}
+.save-slot-desc {
+  flex: 1;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  min-width: 120px;
+}
+.save-slot-btn {
+  padding: 4px 12px !important;
+  font-size: 0.78rem !important;
+  white-space: nowrap;
+}
+
+/* ---- v3.0: Game stats in end screen ---- */
+.game-stats-panel {
+  margin-top: 16px;
+  padding: 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.game-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 16px;
+  font-size: 0.82rem;
+  font-family: monospace;
+}
+.game-stats-grid span:nth-child(odd) { color: var(--text-dim); }
+.game-stats-grid span:nth-child(even) { color: var(--gold); text-align: right; font-weight: 700; }
+
+/* ---- v3.0: Help modal ---- */
+.help-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.help-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+}
+.help-row kbd {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-family: monospace;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  min-width: 80px;
+  text-align: center;
+  color: var(--gold);
+}
+.help-row span { color: var(--text); }

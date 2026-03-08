@@ -87,6 +87,27 @@
       });
     },
 
+    milestone() {
+      // Arpeggio celebratorio para hitos de turno
+      const notes = [523, 659, 784, 659, 1047];
+      notes.forEach((n, i) => {
+        setTimeout(() => this._play(n, 0.25, 'sine', 0.22), i * 120);
+      });
+    },
+
+    research() {
+      // Sonido electrónico para investigación completada
+      this._play(880, 0.1, 'square', 0.12);
+      setTimeout(() => this._play(1109, 0.1, 'square', 0.12), 100);
+      setTimeout(() => this._play(1320, 0.2, 'sine', 0.18), 200);
+    },
+
+    alert() {
+      // Pulso de advertencia (moral baja, hambre)
+      this._play(330, 0.15, 'triangle', 0.2);
+      setTimeout(() => this._play(330, 0.12, 'triangle', 0.2), 320);
+    },
+
     // Ambient drone
     _droneOsc: null,
     _droneGain: null,

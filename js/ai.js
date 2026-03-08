@@ -96,9 +96,26 @@
       if (this.tech.getCurrentResearch(factionId)) return;
       const available = this.tech.getAvailableTechs(factionId);
       if (available.length === 0) return;
-      // Pick first available tech
-      const tech = available[0];
-      this.tech.startResearch(factionId, tech.id, this.resources);
+
+      // Priorizar ramas según el estilo de juego de cada facción
+      const priority = C.FACTIONS[factionId]?.aiPriority || 'defender';
+      const branchPriority = {
+        atacar:   ['tacticas', 'asimilacion', 'mutacion', 'expansion', 'militar'],
+        expandir: ['produccion', 'control', 'militar', 'defensa'],
+        liberar:  ['hacking', 'combate', 'moral', 'defensa'],
+        defender: ['defensa', 'agricultura', 'moral', 'comercio']
+      }[priority] || [];
+
+      // Puntuar: rama prioritaria +10, coste en turnos penaliza
+      let best = available[0];
+      let bestScore = -Infinity;
+      for (const tech of available) {
+        const branchIdx = branchPriority.indexOf(tech.branch);
+        const score = (branchIdx === -1 ? -5 : 10 - branchIdx) - tech.turns * 0.5;
+        if (score > bestScore) { bestScore = score; best = tech; }
+      }
+
+      this.tech.startResearch(factionId, best.id, this.resources);
     }
 
     _aiMove(factionId, districts, map, renderer, priority) {
