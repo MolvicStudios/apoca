@@ -1450,7 +1450,7 @@
 
         document.getElementById('btn-share-result').addEventListener('click', () => {
           const title = this.els.modalTitle.textContent || '';
-          const url = 'https://apoca.pro/';
+          const url = 'https://apoca.online/';
           const text = `${title} en CHRONOS: La Guerra por la Memoria. ¡Juégalo gratis en ${url}`;
           if (navigator.share) {
             navigator.share({ title: 'CHRONOS: La Guerra por la Memoria', text, url }).catch(() => {});
