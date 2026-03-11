@@ -14,6 +14,9 @@
   var PUB_ID = 'ca-pub-1513893788851225';
   var CONSENT_KEY = 'molvic_cookie_consent_' + location.hostname.replace(/\./g, '_');
 
+  // IMPORTANTE: reemplaza G-XXXXXXXXXX con tu Measurement ID de Google Analytics 4
+  var GA4_ID = 'G-XXXXXXXXXX';
+
   // ── AdSense loader ──
   function loadAdSense() {
     if (document.querySelector('script[src*="adsbygoogle"]')) return;
@@ -24,9 +27,35 @@
     document.head.appendChild(s);
   }
 
+  // ── GA4 loader (solo con consentimiento explícito — RGPD/GDPR) ──
+  function loadGA4() {
+    if (!GA4_ID || GA4_ID === 'G-XXXXXXXXXX') return; // ID de placeholder, no cargar
+    if (document.querySelector('script[src*="googletagmanager.com/gtag"]')) return;
+    // Actualizar consent a "granted" antes de cargar el script
+    if (window.gtag) {
+      window.gtag('consent', 'update', {
+        'ad_storage':         'granted',
+        'analytics_storage':  'granted',
+        'ad_user_data':       'granted',
+        'ad_personalization': 'granted'
+      });
+    }
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA4_ID;
+    document.head.appendChild(s);
+    // Inicializar dataLayer si no lo ha hecho ya el inline script del head
+    window.dataLayer = window.dataLayer || [];
+    if (!window.gtag) {
+      window.gtag = function(){ window.dataLayer.push(arguments); };
+    }
+    window.gtag('js', new Date());
+    window.gtag('config', GA4_ID);
+  }
+
   // ── If consent already given, just load and stop ──
   var saved = localStorage.getItem(CONSENT_KEY);
-  if (saved === 'accepted') { loadAdSense(); return; }
+  if (saved === 'accepted') { loadAdSense(); loadGA4(); return; }
   if (saved === 'rejected') {
     (window.adsbygoogle = window.adsbygoogle || []).requestNonPersonalizedAds = 1;
     loadAdSense();
@@ -105,6 +134,7 @@
       localStorage.setItem(CONSENT_KEY, 'accepted');
       wrap.remove();
       loadAdSense();
+      loadGA4();
     });
 
     document.getElementById('mcc-reject').addEventListener('click', function() {
@@ -145,11 +175,11 @@
     setTimeout(function() { createBanner(); notifyAutoAdsAnchorOffset(true); }, 300);
   }
 
-  // Strategy 3: Re-inject if something covers it (check every 2s for 10s)
+  // ── Re-inject if something covers it (check 3 times at 3s intervals) ──
   var checks = 0;
   var watchdog = setInterval(function() {
     checks++;
-    if (checks > 5) { clearInterval(watchdog); return; }
+    if (checks > 3) { clearInterval(watchdog); return; }
 
     var banner = document.getElementById('molvic-cookie-banner');
     if (!banner) {
@@ -174,6 +204,6 @@
       // Something is on top — re-append to ensure we're last in DOM
       document.body.appendChild(banner);
     }
-  }, 2000);
+  }, 3000);
 
 })();

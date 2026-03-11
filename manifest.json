@@ -1,0 +1,28 @@
+{
+  "name": "CHRONOS: La Guerra por la Memoria",
+  "short_name": "CHRONOS",
+  "description": "Juego de estrategia por turnos en hexágonos. Elige tu facción y conquista la ciudad. Gratis en el navegador.",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0D1117",
+  "theme_color": "#D29922",
+  "categories": ["games"],
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/og-image.svg",
+      "sizes": "1200x630",
+      "type": "image/svg+xml",
+      "label": "CHRONOS — Pantalla de selección de facción"
+    }
+  ]
+}

@@ -1055,8 +1055,12 @@
       html += '<div class="panel-section"><div style="color:var(--text-dim);font-size:0.73rem;line-height:1.5">';
       html += '📌 Clic en hex para seleccionar<br>⌨️ <kbd style="background:rgba(255,255,255,0.1);padding:1px 4px;border-radius:3px">?</kbd> para atajos de teclado</div></div>';
 
+      // P2: Bloque AdSense en panel lateral
+      html += '<div class="ad-slot-panel"><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-1513893788851225" data-ad-slot="7933598081" data-ad-format="auto" data-full-width-responsive="true"></ins></div>';
+
       this.els.panelTitle.textContent = '📊 VISIÓN GENERAL';
       this.els.panelContent.innerHTML = html;
+      try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch(e) {}
     }
 
     updateTechPanel() {      const g = this.game;
@@ -1201,8 +1205,8 @@
       html += '<div class="how-to-step"><span class="how-to-icon">⚔️</span><span>Cumple tu condición de victoria antes que los rivales</span></div>';
       html += '</div>';
 
-      // Slot de anuncio responsivo — reemplaza data-ad-slot="0000000000" con tu Slot ID de AdSense
-      html += '<div class="ad-slot-wrapper"><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-1513893788851225" data-ad-slot="0000000000" data-ad-format="auto" data-full-width-responsive="true"></ins></div>';
+      // Slot de anuncio responsivo
+      html += '<div class="ad-slot-wrapper"><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-1513893788851225" data-ad-slot="7933598081" data-ad-format="auto" data-full-width-responsive="true"></ins></div>';
 
       html += '<div class="faction-footer"><a href="privacidad.html" class="faction-footer-link">Política de Privacidad</a> &middot; <a href="https://molvicstudios.com" target="_blank" rel="noopener" class="faction-footer-link">MolvicStudios</a></div>';
 
@@ -1441,9 +1445,9 @@
         // Cross-promo MolvicStudios
         this.els.modalBody.innerHTML += `<div class="cross-promo"><div class="panel-subtitle" style="margin:10px 0 6px">🎮 Más de MolvicStudios</div><a href="https://molvicstudios.com" target="_blank" rel="noopener" class="cross-promo-link">🌐 Descubre más juegos gratuitos en molvicstudios.com</a></div>`;
 
-        // Acciones del modal + slot de anuncio — reemplaza data-ad-slot="0000000000" con tu Slot ID de AdSense
+        // Acciones del modal + slot de anuncio
         this.els.modalActions.innerHTML = `
-          <ins class="adsbygoogle ad-slot-modal" style="display:block" data-ad-client="ca-pub-1513893788851225" data-ad-slot="0000000000" data-ad-format="auto" data-full-width-responsive="true"></ins>
+          <ins class="adsbygoogle ad-slot-modal" style="display:block" data-ad-client="ca-pub-1513893788851225" data-ad-slot="7933598081" data-ad-format="auto" data-full-width-responsive="true"></ins>
           <button class="btn-modal" id="btn-share-result">📤 Compartir Resultado</button>
           <button class="btn-modal" id="btn-new-game">🔄 Nueva Partida</button>`;
         try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch(e) {}

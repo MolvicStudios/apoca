@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0D1117"/>
+      <stop offset="100%" stop-color="#161B22"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGrad)"/>
+
+  <!-- Decorative hex pattern (top-right) -->
+  <g opacity="0.12" stroke="#D29922" stroke-width="1" fill="none">
+    <polygon points="960,40 995,60 995,100 960,120 925,100 925,60"/>
+    <polygon points="1030,40 1065,60 1065,100 1030,120 995,100 995,60"/>
+    <polygon points="995,110 1030,130 1030,170 995,190 960,170 960,130"/>
+    <polygon points="1065,110 1100,130 1100,170 1065,190 1030,170 1030,130"/>
+    <polygon points="1030,180 1065,200 1065,240 1030,260 995,240 995,200"/>
+    <polygon points="960,180 995,200 995,240 960,260 925,240 925,200"/>
+  </g>
+
+  <!-- Decorative hex pattern (bottom-left) -->
+  <g opacity="0.12" stroke="#D29922" stroke-width="1" fill="none">
+    <polygon points="100,440 135,460 135,500 100,520 65,500 65,460"/>
+    <polygon points="170,440 205,460 205,500 170,520 135,500 135,460"/>
+    <polygon points="135,510 170,530 170,570 135,590 100,570 100,530"/>
+    <polygon points="205,510 240,530 240,570 205,590 170,570 170,530"/>
+  </g>
+
+  <!-- Gold frame -->
+  <rect x="14" y="14" width="1172" height="602" fill="none" stroke="#D29922" stroke-width="2" rx="10"/>
+
+  <!-- CHRONOS title — letter-by-letter coloring -->
+  <text text-anchor="middle" font-family="'Courier New', Courier, monospace" font-weight="900" font-size="130" letter-spacing="14">
+    <tspan x="600" y="230">
+      <tspan fill="#58A6FF">C</tspan><tspan fill="#A371F7">H</tspan><tspan fill="#F85149">R</tspan><tspan fill="#D29922">O</tspan><tspan fill="#3FB950">N</tspan><tspan fill="#58A6FF">O</tspan><tspan fill="#F85149">S</tspan>
+    </tspan>
+  </text>
+
+  <!-- Subtitle -->
+  <text x="600" y="295" text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif" font-size="28"
+        fill="#8B949E" letter-spacing="6">LA GUERRA POR LA MEMORIA</text>
+
+  <!-- Horizontal divider -->
+  <line x1="160" y1="330" x2="1040" y2="330" stroke="#30363D" stroke-width="1"/>
+
+  <!-- Faction bars -->
+  <rect x="210" y="365" width="18" height="18" rx="3" fill="#58A6FF"/>
+  <text x="235" y="380" font-family="Arial, sans-serif" font-size="18" fill="#C9D1D9">La Resistencia</text>
+
+  <rect x="430" y="365" width="18" height="18" rx="3" fill="#F85149"/>
+  <text x="455" y="380" font-family="Arial, sans-serif" font-size="18" fill="#C9D1D9">Synergia</text>
+
+  <rect x="620" y="365" width="18" height="18" rx="3" fill="#3FB950"/>
+  <text x="645" y="380" font-family="Arial, sans-serif" font-size="18" fill="#C9D1D9">La Horda</text>
+
+  <rect x="810" y="365" width="18" height="18" rx="3" fill="#E6EDF3"/>
+  <text x="835" y="380" font-family="Arial, sans-serif" font-size="18" fill="#C9D1D9">Los Desconectados</text>
+
+  <!-- Game description -->
+  <text x="600" y="440" text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif" font-size="24"
+        fill="#C9D1D9">Estrategia por turnos en hexagonos · Multijugador local</text>
+
+  <text x="600" y="476" text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif" font-size="24"
+        fill="#C9D1D9">Elige tu faccion y conquista la ciudad en el apocalipsis</text>
+
+  <!-- CTA button -->
+  <rect x="430" y="510" width="340" height="58" rx="10" fill="#D29922"/>
+  <text x="600" y="548" text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="24"
+        fill="#0D1117">GRATIS EN apoca.online</text>
+
+  <!-- Tagline -->
+  <text x="600" y="606" text-anchor="middle"
+        font-family="'Courier New', Courier, monospace" font-size="16"
+        fill="#484F58" letter-spacing="2">Sin instalacion · Sin registro · En el navegador</text>
+</svg>

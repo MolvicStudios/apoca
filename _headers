@@ -1,0 +1,11 @@
+# Cabeceras HTTP de seguridad — Netlify / Cloudflare Pages
+# Para Apache: usa .htaccess | Para Nginx: usa add_header en server block
+
+/*
+  # CSP: permite el juego + AdSense + GA4 sin bloquear nada
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://adservice.google.com https://googleads.g.doubleclick.net https://www.googletagmanager.com https://www.google-analytics.com https://csi.gstatic.com https://tpc.googlesyndication.com; frame-src https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com; img-src * data: blob:; connect-src 'self' https://pagead2.googlesyndication.com https://www.google-analytics.com https://stats.g.doubleclick.net https://www.googletagmanager.com https://googleads.g.doubleclick.net https://adservice.google.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; worker-src 'self' blob:; media-src 'self' blob:
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  X-XSS-Protection: 1; mode=block

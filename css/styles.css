@@ -1058,6 +1058,14 @@ html, body {
   display: block;
 }
 
+/* Ad slot en panel lateral (cuando no hay hex seleccionado) */
+.ad-slot-panel {
+  width: 100%;
+  min-height: 250px;
+  margin-top: 12px;
+  display: block;
+}
+
 /* ---- Sección "Cómo jugar" en Faction Select ---- */
 .faction-how-to {
   display: flex;

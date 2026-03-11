@@ -1,0 +1,13 @@
+{
+  "name": "chronos-apoca",
+  "version": "2.0.0",
+  "private": true,
+  "description": "CHRONOS: La Guerra por la Memoria — Herramientas de build",
+  "scripts": {
+    "build": "node build.js",
+    "build:watch": "node build.js --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.2"
+  }
+}

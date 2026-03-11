@@ -1,0 +1,41 @@
+# ============================================================================
+# .htaccess — CHRONOS: La Guerra por la Memoria
+# Cabeceras de seguridad + rendimiento para Apache / hosting compartido
+# ============================================================================
+
+Options -Indexes
+
+# ── Cabeceras de seguridad HTTP ──────────────────────────────────────────────
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set X-XSS-Protection "1; mode=block"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+
+  # CSP: ajustado para AdSense + GA4 + juego
+  Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://adservice.google.com https://googleads.g.doubleclick.net https://www.googletagmanager.com https://www.google-analytics.com https://csi.gstatic.com https://tpc.googlesyndication.com; frame-src https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com; img-src * data: blob:; connect-src 'self' https://pagead2.googlesyndication.com https://www.google-analytics.com https://stats.g.doubleclick.net https://www.googletagmanager.com https://googleads.g.doubleclick.net https://adservice.google.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; worker-src 'self' blob:; media-src 'self' blob:"
+</IfModule>
+
+# ── Caché de assets estáticos ────────────────────────────────────────────────
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/html              "access plus 0 seconds"
+  ExpiresByType text/css               "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  ExpiresByType image/svg+xml          "access plus 1 year"
+  ExpiresByType image/png              "access plus 1 year"
+  ExpiresByType image/webp             "access plus 1 year"
+  ExpiresByType application/json       "access plus 1 week"
+  ExpiresByType text/xml               "access plus 1 week"
+</IfModule>
+
+# ── Compresión gzip ──────────────────────────────────────────────────────────
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript text/javascript application/json text/xml image/svg+xml
+</IfModule>
+
+# ── HTTPS redirect (descomenta si tu hosting soporta SSL) ───────────────────
+# RewriteEngine On
+# RewriteCond %{HTTPS} off
+# RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
