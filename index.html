@@ -4,14 +4,69 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="google-adsense-account" content="ca-pub-1513893788851225">
-  <title>CHRONOS: La Guerra por la Memoria</title>
-  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- SEO -->
+  <title>CHRONOS: La Guerra por la Memoria — Juego de Estrategia Gratis</title>
+  <meta name="description" content="CHRONOS: La Guerra por la Memoria. Juego de estrategia por turnos en hexágonos. Elige tu facción, expande tu territorio y conquista la ciudad en el apocalipsis. Gratis, sin instalación.">
+  <link rel="canonical" href="https://apoca.pro/">
+
+  <!-- Open Graph / Compartir en redes sociales -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="CHRONOS: La Guerra por la Memoria">
+  <meta property="og:description" content="Juego de estrategia por turnos en hexágonos. Elige tu facción y lucha por el control de la ciudad. Gratis en el navegador.">
+  <meta property="og:url" content="https://apoca.pro/">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="CHRONOS: La Guerra por la Memoria">
+  <meta name="twitter:description" content="Juego de estrategia por turnos en hexágonos. Gratis en el navegador, sin instalación.">
+
+  <!-- Rendimiento: preconexión con servidores de publicidad -->
+  <link rel="preconnect" href="https://pagead2.googlesyndication.com">
+  <link rel="preconnect" href="https://googleads.g.doubleclick.net">
+  <link rel="preload" href="css/styles.css" as="style">
+
+  <!-- Favicon & PWA -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- Schema.org: datos estructurados para buscadores -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    "name": "CHRONOS: La Guerra por la Memoria",
+    "description": "Juego de estrategia por turnos en hexágonos. Elige tu facción y lucha por el control de la ciudad en el apocalipsis.",
+    "applicationCategory": "Game",
+    "genre": "Strategy",
+    "operatingSystem": "Web Browser",
+    "url": "https://apoca.pro/",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "EUR"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "MolvicStudios",
+      "url": "https://molvicstudios.com"
+    }
+  }
+  </script>
 </head>
 <body>
 
   <!-- ======== PANTALLA SELECCIÓN DE FACCIÓN ======== -->
-  <div id="screen-faction"></div>
+  <div id="screen-faction">
+    <!-- Contenido estático indexable por buscadores (el JS lo reemplaza al cargar) -->
+    <h1 class="sr-only">CHRONOS: La Guerra por la Memoria — Juego de Estrategia por Turnos</h1>
+    <p class="sr-only">Juego de estrategia por turnos en hexágonos. Elige entre La Resistencia, Corporación Synergia, La Horda o Los Desconectados y conquista la ciudad en el apocalipsis. Gratis en el navegador, sin instalación.</p>
+    <!-- Indicador de carga visible mientras los scripts arrancan -->
+    <div id="loader-init">
+      <div class="loader-spinner"></div>
+      <p class="loader-text">Cargando CHRONOS…</p>
+    </div>
+  </div>
 
   <!-- ======== PANTALLA DE JUEGO ======== -->
   <div id="screen-game" class="hidden">
@@ -72,22 +127,22 @@
     <div id="tech-content"></div>
   </div>
 
-  <!-- Scripts -->
-  <script src="js/config.js"></script>
-  <script src="js/hex.js"></script>
-  <script src="js/map.js"></script>
-  <script src="js/renderer.js"></script>
-  <script src="js/resources.js"></script>
-  <script src="js/buildings.js"></script>
-  <script src="js/units.js"></script>
-  <script src="js/tech.js"></script>
-  <script src="js/ai.js"></script>
-  <script src="js/events.js"></script>
-  <script src="js/turns.js"></script>
-  <script src="js/audio.js"></script>
-  <script src="js/save.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/game.js"></script>
-<script src="/cookie-consent.js"></script>
+  <!-- Scripts (defer: descarga en paralelo, ejecuta en orden, no bloquea el render) -->
+  <script defer src="js/config.js"></script>
+  <script defer src="js/hex.js"></script>
+  <script defer src="js/map.js"></script>
+  <script defer src="js/renderer.js"></script>
+  <script defer src="js/resources.js"></script>
+  <script defer src="js/buildings.js"></script>
+  <script defer src="js/units.js"></script>
+  <script defer src="js/tech.js"></script>
+  <script defer src="js/ai.js"></script>
+  <script defer src="js/events.js"></script>
+  <script defer src="js/turns.js"></script>
+  <script defer src="js/audio.js"></script>
+  <script defer src="js/save.js"></script>
+  <script defer src="js/ui.js"></script>
+  <script defer src="js/game.js"></script>
+  <script defer src="/cookie-consent.js"></script>
 </body>
 </html>

@@ -1179,7 +1179,20 @@
       html += '<button class="btn-start-game" id="btn-start-game">⚔️ INICIAR PARTIDA</button>';
       html += '<div class="start-game-info" id="start-game-info"></div>';
 
+      html += '<div class="faction-how-to">';
+      html += '<div class="how-to-step"><span class="how-to-icon">🗺️</span><span>Conquista hexágonos para producir recursos</span></div>';
+      html += '<div class="how-to-step"><span class="how-to-icon">🏗️</span><span>Construye edificios y recluta unidades</span></div>';
+      html += '<div class="how-to-step"><span class="how-to-icon">⚔️</span><span>Cumple tu condición de victoria antes que los rivales</span></div>';
+      html += '</div>';
+
+      // Slot de anuncio responsivo — reemplaza data-ad-slot="0000000000" con tu Slot ID de AdSense
+      html += '<div class="ad-slot-wrapper"><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-1513893788851225" data-ad-slot="0000000000" data-ad-format="auto" data-full-width-responsive="true"></ins></div>';
+
+      html += '<div class="faction-footer"><a href="privacidad.html" class="faction-footer-link">Política de Privacidad</a> &middot; <a href="https://molvicstudios.com" target="_blank" rel="noopener" class="faction-footer-link">MolvicStudios</a></div>';
+
       this.els.screenFaction.innerHTML = html;
+      // Inicializar slot publicitario tras inyectar el ins en el DOM
+      try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch(e) {}
 
       const updateStartButton = () => {
         const humanCount = Object.values(config).filter(v => v === 'human').length;
@@ -1389,7 +1402,29 @@
           this.els.modalBody.innerHTML += statsHtml;
         }
 
-        this.els.modalActions.innerHTML = `<button class="btn-modal" id="btn-new-game">🔄 Nueva Partida</button>`;
+        // Cross-promo MolvicStudios
+        this.els.modalBody.innerHTML += `<div class="cross-promo"><div class="panel-subtitle" style="margin:10px 0 6px">🎮 Más de MolvicStudios</div><a href="https://molvicstudios.com" target="_blank" rel="noopener" class="cross-promo-link">🌐 Descubre más juegos gratuitos en molvicstudios.com</a></div>`;
+
+        // Acciones del modal + slot de anuncio — reemplaza data-ad-slot="0000000000" con tu Slot ID de AdSense
+        this.els.modalActions.innerHTML = `
+          <ins class="adsbygoogle ad-slot-modal" style="display:block" data-ad-client="ca-pub-1513893788851225" data-ad-slot="0000000000" data-ad-format="auto" data-full-width-responsive="true"></ins>
+          <button class="btn-modal" id="btn-share-result">📤 Compartir Resultado</button>
+          <button class="btn-modal" id="btn-new-game">🔄 Nueva Partida</button>`;
+        try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch(e) {}
+
+        document.getElementById('btn-share-result').addEventListener('click', () => {
+          const title = this.els.modalTitle.textContent || '';
+          const url = 'https://apoca.pro/';
+          const text = `${title} en CHRONOS: La Guerra por la Memoria. ¡Juégalo gratis en ${url}`;
+          if (navigator.share) {
+            navigator.share({ title: 'CHRONOS: La Guerra por la Memoria', text, url }).catch(() => {});
+          } else {
+            navigator.clipboard?.writeText(text)
+              .then(() => this._showToast('📋 Resultado copiado'))
+              .catch(() => this._showToast('❌ No se pudo copiar'));
+          }
+        });
+
         document.getElementById('btn-new-game').addEventListener('click', () => {
           this.els.modal.classList.add('hidden');
           this.showFactionSelect();

@@ -950,3 +950,136 @@ html, body {
 }
 .split-qty-input:focus { outline: none; border-color: var(--gold); }
 .split-unit-max { font-size: 0.75rem; color: var(--text-dim); min-width: 40px; text-align: right; }
+
+/* ============================================================================
+   MEJORAS UX/SEO/ADS — Auditoría MolvicStudios
+   ============================================================================ */
+
+/* ---- Accesibilidad: contenido solo para lectores de pantalla y buscadores ---- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- Loader de carga inicial ---- */
+#loader-init {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+}
+
+.loader-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loader-text {
+  color: var(--text-dim);
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+}
+
+/* ---- Slots de Publicidad ---- */
+.ad-slot-wrapper {
+  width: 100%;
+  max-width: 728px;
+  margin: 24px auto 0;
+  min-height: 90px;
+}
+
+.ad-slot-modal {
+  width: 100%;
+  min-height: 90px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+/* ---- Sección "Cómo jugar" en Faction Select ---- */
+.faction-how-to {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.how-to-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  color: var(--text);
+  max-width: 260px;
+}
+
+.how-to-icon { font-size: 1.4rem; flex-shrink: 0; }
+
+/* ---- Footer de Faction Select ---- */
+.faction-footer {
+  margin-top: 12px;
+  margin-bottom: 20px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.faction-footer-link {
+  color: var(--text-dim);
+  text-decoration: none;
+}
+
+.faction-footer-link:hover {
+  color: var(--blue);
+  text-decoration: underline;
+}
+
+/* ---- Cross-Promo en modal de fin de partida ---- */
+.cross-promo {
+  margin-top: 12px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.cross-promo-link {
+  display: block;
+  color: var(--blue);
+  font-size: 0.85rem;
+  text-decoration: none;
+  padding: 4px 0;
+}
+
+.cross-promo-link:hover { text-decoration: underline; }
+
+/* ---- HUD móvil: ocultar recursos secundarios en pantallas muy pequeñas ---- */
+@media (max-width: 480px) {
+  .res-group[title="Créditos"],
+  .res-group[title="Moral"],
+  .res-group[title="Recurso especial"] {
+    display: none;
+  }
+}
