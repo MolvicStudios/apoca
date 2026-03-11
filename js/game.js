@@ -51,7 +51,18 @@
     }
 
     startNewGame(config) {
-      // config = { resistencia: 'human'|'ai', synergia: 'human'|'ai', ... }
+      // config = { resistencia: 'human'|'ai', ..., mapSize: 'small'|'medium'|'large', fogOfWar: true|false }
+
+      // Apply map size
+      const MAP_SIZES = { small: 7, medium: 11, large: 15 };
+      const sz = MAP_SIZES[config.mapSize] || 7;
+      C.GRID_COLS = sz;
+      C.GRID_ROWS = sz;
+      C.MAP_SIZE  = config.mapSize || 'small';
+      C.FOG_OF_WAR = config.fogOfWar !== false;
+      this.map.width  = sz;
+      this.map.height = sz;
+
       this.playerConfig = config;
       this.humanPlayers = Object.keys(config).filter(f => config[f] === 'human');
       this.activePlayerIndex = 0;
@@ -119,6 +130,16 @@
     }
 
     loadSave(data) {
+      // Restore map size and fog of war
+      const MAP_SIZES = { small: 7, medium: 11, large: 15 };
+      const sz = MAP_SIZES[data.mapSize] || 7;
+      C.GRID_COLS  = sz;
+      C.GRID_ROWS  = sz;
+      C.MAP_SIZE   = data.mapSize || 'small';
+      C.FOG_OF_WAR = data.fogOfWar !== false;
+      this.map.width  = sz;
+      this.map.height = sz;
+
       this.playerFaction = data.playerFaction;
       this.selectedHex = null;
       this.movementRange = null;

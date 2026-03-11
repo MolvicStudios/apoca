@@ -1139,6 +1139,8 @@
       const factionIds = Object.keys(C.FACTIONS);
       const config = {};
       factionIds.forEach((fid, i) => { config[fid] = i === 0 ? 'human' : 'ai'; });
+      config.mapSize  = 'small';
+      config.fogOfWar = true;
 
       let html = '<div class="faction-select-title">CHRONOS</div>';
       html += '<div class="faction-select-subtitle">La Guerra por la Memoria</div>';
@@ -1179,7 +1181,21 @@
       html += '<button class="btn-start-game" id="btn-start-game">⚔️ INICIAR PARTIDA</button>';
       html += '<div class="start-game-info" id="start-game-info"></div>';
 
-      html += '<div class="faction-how-to">';
+      // ---- Map size + fog of war options ----
+      html += '<div class="game-options">';
+      html += '<div class="game-options-label">🗺️ TAMAÑO DE MAPA</div>';
+      html += '<div class="game-options-row" id="map-size-row">';
+      html += `<button class="toggle-btn active" data-size="small">Pequeño<br><span class="opt-sub">7×7</span></button>`;
+      html += `<button class="toggle-btn" data-size="medium">Mediano<br><span class="opt-sub">11×11</span></button>`;
+      html += `<button class="toggle-btn" data-size="large">Grande<br><span class="opt-sub">15×15</span></button>`;
+      html += '</div>';
+      html += '<div class="game-options-label" style="margin-top:12px">👁️ NIEBLA DE GUERRA</div>';
+      html += '<div class="game-options-row" id="fog-row">';
+      html += `<button class="toggle-btn active" data-fog="on">Activada</button>`;
+      html += `<button class="toggle-btn" data-fog="off">Desactivada</button>`;
+      html += '</div>';
+      html += '</div>';
+
       html += '<div class="how-to-step"><span class="how-to-icon">🗺️</span><span>Conquista hexágonos para producir recursos</span></div>';
       html += '<div class="how-to-step"><span class="how-to-icon">🏗️</span><span>Construye edificios y recluta unidades</span></div>';
       html += '<div class="how-to-step"><span class="how-to-icon">⚔️</span><span>Cumple tu condición de victoria antes que los rivales</span></div>';
@@ -1209,6 +1225,26 @@
         }
       };
       updateStartButton();
+
+      // Map size selector
+      document.getElementById('map-size-row').querySelectorAll('[data-size]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          config.mapSize = btn.dataset.size;
+          CHRONOS.Audio.select();
+          document.getElementById('map-size-row').querySelectorAll('[data-size]').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+
+      // Fog of war toggle
+      document.getElementById('fog-row').querySelectorAll('[data-fog]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          config.fogOfWar = btn.dataset.fog === 'on';
+          CHRONOS.Audio.select();
+          document.getElementById('fog-row').querySelectorAll('[data-fog]').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
 
       // Toggle buttons
       this.els.screenFaction.querySelectorAll('.faction-toggle').forEach(toggle => {

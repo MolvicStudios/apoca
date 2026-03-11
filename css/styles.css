@@ -695,6 +695,51 @@ html, body {
   color: var(--red);
 }
 
+/* ---- Game options: map size & fog of war ---- */
+.game-options {
+  margin-top: 20px;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+  width: 100%;
+  max-width: 420px;
+  box-sizing: border-box;
+}
+
+.game-options-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.game-options-row {
+  display: flex;
+  gap: 8px;
+}
+
+.game-options-row .toggle-btn {
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.game-options-row .toggle-btn.active {
+  border-color: var(--gold);
+  background: rgba(210, 153, 34, 0.15);
+  color: var(--gold);
+}
+
+.opt-sub {
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 1px;
+  opacity: 0.75;
+}
+
 .faction-card-human {
   border-color: rgba(63, 185, 80, 0.4);
 }

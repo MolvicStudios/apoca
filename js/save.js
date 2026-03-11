@@ -14,6 +14,8 @@
         const data = {
           version: CURRENT_VERSION,
           timestamp: Date.now(),
+          mapSize: C.MAP_SIZE || 'small',
+          fogOfWar: C.FOG_OF_WAR !== false,
           playerFaction: game.playerFaction,
           playerConfig: game.playerConfig,
           humanPlayers: game.humanPlayers,

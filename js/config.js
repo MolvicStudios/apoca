@@ -8,6 +8,8 @@ CHRONOS.Config = {
   GRID_COLS: 7,
   GRID_ROWS: 7,
   HEX_SIZE: 38,
+  MAP_SIZE: 'small',   // 'small'=7x7 | 'medium'=11x11 | 'large'=15x15
+  FOG_OF_WAR: true,    // true=niebla de guerra activa | false=todo visible
 
   // ---- Colores ----
   COLORS: {

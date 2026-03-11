@@ -90,6 +90,17 @@
     }
 
     generate() {
+      const w = this.width;
+      const h = this.height;
+      const cx = Math.floor(w / 2);
+      const cy = Math.floor(h / 2);
+
+      // Update faction start positions to match current map size
+      C.FACTIONS.resistencia.startPositions    = [[0,   0  ], [1,   0  ], [0,   1  ]];
+      C.FACTIONS.synergia.startPositions       = [[w-1, 0  ], [w-2, 0  ], [w-1, 1  ]];
+      C.FACTIONS.horda.startPositions          = [[0,   h-1], [1,   h-1], [0,   h-2]];
+      C.FACTIONS.desconectados.startPositions  = [[w-1, h-1], [w-2, h-1], [w-1, h-2]];
+
       // Build pool of district types
       const pool = [];
       const dist = C.MAP_DISTRIBUTION;
@@ -115,7 +126,7 @@
       for (let q = 0; q < this.width; q++) {
         this.grid[q] = [];
         for (let r = 0; r < this.height; r++) {
-          if (q === 3 && r === 3) {
+          if (q === cx && r === cy) {
             this.grid[q][r] = new District(q, r, 'sigma7', null);
           } else {
             this.grid[q][r] = new District(q, r, pool[poolIdx++], null);
@@ -140,7 +151,7 @@
       }
 
       // Ensure some neutral districts near sigma-7 have variety
-      this.grid[3][3].population = 50;
+      this.grid[cx][cy].population = 50;
 
       // Assign bonus resources to ~22% of neutral non-paramo tiles
       const bonusPools = [
@@ -186,6 +197,15 @@
     }
 
     updateVisibility(playerFaction, tech) {
+      // If fog of war is disabled, everything is always visible
+      if (!C.FOG_OF_WAR) {
+        for (const d of this.getAllDistricts()) {
+          d.isVisible = true;
+          d.wasDiscovered = true;
+        }
+        return [];
+      }
+
       // Reset current visibility (preserving wasDiscovered for persistent fog)
       for (const d of this.getAllDistricts()) d.isVisible = false;
 
