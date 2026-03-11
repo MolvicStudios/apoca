@@ -115,17 +115,34 @@
     });
   }
 
+  // ── Notificar a Auto Ads que hay un banner de cookies ocupando la parte inferior
+  //    para que no coloque un anchor ad encima y se solapem
+  function notifyAutoAdsAnchorOffset(visible) {
+    // Auto Ads respeta window._googCsa_anchor_offset (px desde abajo)
+    // Cuando el banner está visible, desplazamos el anchor ad hacia arriba
+    try {
+      var bannerH = visible ? 80 : 0;
+      window._googCsa_anchor_offset = bannerH;
+      // Para publisher tags modernos, también se usa el atributo data-anchor-status
+      var anchorAds = document.querySelectorAll('ins.adsbygoogle[data-ad-format="autorelaxed"], ins.adsbygoogle');
+      anchorAds.forEach(function(ad) {
+        if (ad.dataset && ad.dataset.adFormat === 'autorelaxed') return;
+        // noop — Auto Ads gestiona sus propios elementos
+      });
+    } catch(e) {}
+  }
+
   // ── Ensure banner appears AFTER everything else has rendered ──
   // Use multiple strategies to guarantee visibility:
 
   // Strategy 1: On DOMContentLoaded (if not yet fired)
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
-      setTimeout(createBanner, 300);
+      setTimeout(function() { createBanner(); notifyAutoAdsAnchorOffset(true); }, 300);
     });
   } else {
     // Strategy 2: DOM already ready, wait a tick for game init
-    setTimeout(createBanner, 300);
+    setTimeout(function() { createBanner(); notifyAutoAdsAnchorOffset(true); }, 300);
   }
 
   // Strategy 3: Re-inject if something covers it (check every 2s for 10s)
